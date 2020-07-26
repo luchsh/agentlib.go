@@ -37,6 +37,7 @@ static JavaVM* java_vm;
 
 // exported CGO functions writen in Go lang
 extern void MainForwardLoop();
+extern void OnJvmtiVmInit(uintptr_t, uintptr_t, uintptr_t);
 
 // entry of the newly create thread
 static void
@@ -183,6 +184,7 @@ static void on_VMInit(jvmtiEnv *jvmti,
   if (jvmti_res != JVMTI_ERROR_NONE) {
     printf("Failed to start agent thread\n");
   }
+  OnJvmtiVmInit((uintptr_t)jvmti, (uintptr_t)jni, (uintptr_t)thread);
 }
 
 static void on_VMDeath(jvmtiEnv *jvmti_env,
