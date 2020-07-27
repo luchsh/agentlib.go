@@ -15,10 +15,12 @@
 //
 package main
 
+//#include "wrapper.h"
 import "C"
 
 import (
 	"fmt"
+	"unsafe"
 )
 
 // JVMTI event ID definitions
@@ -223,8 +225,10 @@ type JvmtiCallbacks struct {
 }
 
 // SetVmInitCallback sets callback function for VMInit event
-func (callbacks *JvmtiCallbacks) SetVmInitCallback(fn func(jvmti JvmtiEnv, jni JniEnv, thrd uintptr)) {
+func (callbacks *JvmtiCallbacks) SetVmInitCallback(fn func(JvmtiEnv, JniEnv, uintptr)) {
 	callbacks.onJvmtiVmInit = fn
+	jvmti := unsafe.Pointer(_lib.jvmti)
+	C.EnableJvmtiCallback(jvmti, JVMTI_EVENT_VM_INIT)
 }
 
 //export OnJvmtiEvent

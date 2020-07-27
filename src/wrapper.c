@@ -359,7 +359,8 @@ static void linkLocalJvmtiCallback(int event_id) {
   }
 }
 
-void EnableJvmtiCallback(jvmtiEnv* jvmti, int event_id) {
+void EnableJvmtiCallback(void* p, int event_id) {
+  jvmtiEnv* jvmti = (jvmtiEnv*)p;
   if (event_id < JVMTI_MIN_EVENT_TYPE_VAL || event_id > JVMTI_MAX_EVENT_TYPE_VAL) {
     printf("Invalid jvmti event to enable: %d\n", event_id);
     return;
@@ -392,8 +393,6 @@ jint Agent_OnLoad(JavaVM* javaVM, char* options, void* reserved) {
     return JNI_ERR;
   }
 
-  GO_CALL(OnAgentLoad((uintptr_t)javaVM, options));
-
   jvmtiEnv* jvmti = NULL;
   jvmtiError jvmti_res = (*javaVM)->GetEnv(javaVM, (void**)&jvmti, JVMTI_VERSION_1_1);
   if (jvmti_res != JVMTI_ERROR_NONE || jvmti == NULL) {
@@ -406,7 +405,7 @@ jint Agent_OnLoad(JavaVM* javaVM, char* options, void* reserved) {
     memset(_callbacks, 0, sizeof(jvmtiEventCallbacks));
   }
 
-  EnableJvmtiCallback(jvmti, JVMTI_EVENT_VM_INIT);
+  GO_CALL(OnAgentLoad((uintptr_t)javaVM, jvmti, options));
 
   return JNI_OK;
 }
@@ -414,27 +413,6 @@ jint Agent_OnLoad(JavaVM* javaVM, char* options, void* reserved) {
 // destroy resources;
 void Agent_OnUnload(JavaVM* javaVM) {
   GO_CALL(OnAgentUnload());
-
-  jvmtiEnv* jvmti = NULL;
-  jvmtiError jvmti_res = (*javaVM)->GetEnv(javaVM, (void**)&jvmti, JVMTI_VERSION_1_1);
-  if (jvmti_res != JVMTI_ERROR_NONE || jvmti == NULL) {
-    printf("Failed to get jvmtiEnv from JavaVM");
-    return;
-  }
-  // clear all events
-  memset(_callbacks, 0, sizeof(_callbacks));
-  jvmti_res = (*jvmti)->SetEventCallbacks(jvmti, _callbacks, sizeof(jvmtiEventCallbacks));
-  if (jvmti_res != JVMTI_ERROR_NONE) {
-    printf("Failed to set jvmti callbacks\n");
-    return;
-  }
-  for (int e = JVMTI_MIN_EVENT_TYPE_VAL; e <= JVMTI_MAX_EVENT_TYPE_VAL; ++e) {
-    jvmti_res = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_DISABLE, e, NULL);
-    if (jvmti_res != JVMTI_ERROR_NONE) {
-      printf("Failed to set jvmti callbacks\n");
-      return;
-    }
-  }
 
   jvmtiEventCallbacks* cb = _callbacks;
   _callbacks = NULL;

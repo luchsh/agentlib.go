@@ -38,11 +38,10 @@
 extern "C" {
 #endif
 
-/*
- * Entry point of the library following the JVMTI specification
- */
-jint Agent_OnLoad(JavaVM* javaVM, char* options, void* reserved);
-
+// Enable a JVMTI event notification
+// @arg p         Pointer to jvmtiEnv*, using uintptr_t to make it easier to be called from Go
+// @arg event_id  ID of the JVMTI event to be enabled
+void EnableJvmtiCallback(void* p, int event_id);
 
 #ifdef __cplusplus
 }

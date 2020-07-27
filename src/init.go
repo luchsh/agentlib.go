@@ -17,12 +17,15 @@ package main
 
 //#include "wrapper.h"
 import "C"
+
 // AgentLib defines the information of a agent library
 type AgentLib struct {
 	// The unique instance of JavaVM
 	javaVM uintptr 
 	// command line options to this agent
 	options string
+	// current jvmti env
+	jvmti	JvmtiEnv
 	// Callbacks
 	callbacks JvmtiCallbacks
 }
@@ -36,10 +39,11 @@ func (agent *AgentLib) GetCallbacks() *JvmtiCallbacks {
 var _lib *AgentLib
 
 //export OnAgentLoad
-func OnAgentLoad(javaVM uintptr, options *C.char) {
+func OnAgentLoad(javaVM, jvmti uintptr, options *C.char) {
 	_lib = new(AgentLib)
 	_lib.javaVM = javaVM
 	_lib.options = C.GoString(options)
+	_lib.jvmti = JvmtiEnv(jvmti)
 	AgentGoOnLoad(_lib)
 }
 
@@ -51,4 +55,5 @@ func OnAgentUnload() int32 {
 
 //export MainForwardLoop
 func MainForwardLoop() {
+	// TODO: cross-runtime forwarding mechanism
 }

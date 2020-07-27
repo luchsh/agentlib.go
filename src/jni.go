@@ -30,5 +30,5 @@ type JniEnv uintptr
 // GetVersion corresponding to
 // jint GetVersion(JNIEnv *env);
 func (jni *JniEnv) GetVersion() int32 {
-	return 0
+	return JNI_VERSION_1_2
 }
