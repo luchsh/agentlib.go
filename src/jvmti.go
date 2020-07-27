@@ -18,8 +18,5 @@ package main
 // #include "wrapper.h"
 import "C"
 
-// JVMTI represents the jvmtiEnv* type
-type JVMTI struct {
-	// pointer to a cached jvmtiEnv* pointer
-	jvmti uintptr
-}
+// JvmtiEnv corresponds to jvmtiEnv*
+type JvmtiEnv uintptr

@@ -23,16 +23,12 @@ const (
 	JNI_VERSION_1_2 = 0x00010002
 )
 
-// JNI type represents the JNIEnv* type
-type JNI struct {
-	// pointer to a cached JNIEnv* pointer
-	jni uintptr
-}
+// JniEnv conrresponds to JNIEnv*
+type JniEnv uintptr
+
 
 // GetVersion corresponding to
 // jint GetVersion(JNIEnv *env);
-func (jni *JNI) GetVersion() int32 {
+func (jni *JniEnv) GetVersion() int32 {
 	return 0
 }
-
-func main() {}

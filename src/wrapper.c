@@ -24,6 +24,8 @@ static jint debug_output = JNI_TRUE;
 
 static JavaVM* java_vm;
 
+#define ARRAY_LEN(arr)  (sizeof(arr) / sizeof(arr[0]))
+
 #define DEBUG(code) do { \
   if (debug_output == JNI_TRUE) { \
     code; \
@@ -37,7 +39,7 @@ static JavaVM* java_vm;
 
 // exported CGO functions writen in Go lang
 extern void MainForwardLoop();
-extern void OnJvmtiVmInit(uintptr_t, uintptr_t, uintptr_t);
+extern void OnJvmtiEvent(int id, uintptr_t jvmti, uintptr_t jni, uintptr_t params, int params_len);
 
 // entry of the newly create thread
 static void
@@ -84,12 +86,14 @@ static void on_Breakpoint(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
             jmethodID method,
-            jlocation location) { }
+            jlocation location)
+{ /* TODO */ }
 static void on_SingleStep(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
             jmethodID method,
-            jlocation location) { }
+            jlocation location)
+{ /* TODO */ }
 static void on_FieldAccess(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
@@ -97,7 +101,8 @@ static void on_FieldAccess(jvmtiEnv *jvmti_env,
             jlocation location,
             jclass field_klass,
             jobject object,
-            jfieldID field) { }
+            jfieldID field)
+{ /* TODO */ }
 static void on_FieldModification(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
@@ -107,28 +112,33 @@ static void on_FieldModification(jvmtiEnv *jvmti_env,
             jobject object,
             jfieldID field,
             char signature_type,
-            jvalue new_value) {}
+            jvalue new_value)
+{ /* TODO */ }
 static void on_FramePop(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
             jmethodID method,
-            jboolean was_popped_by_exception) {}
+            jboolean was_popped_by_exception)
+{ /* TODO */ }
 static void on_MethodEntry(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
-            jmethodID method) {}
+            jmethodID method)
+{ /* TODO */ }
 static void on_MethodExit(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
             jmethodID method,
             jboolean was_popped_by_exception,
-            jvalue return_value) {}
+            jvalue return_value)
+{ /* TODO */ }
 static void on_NativeMethodBind(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
             jmethodID method,
             void* address,
-            void** new_address_ptr) { }
+            void** new_address_ptr)
+{ /* TODO */ }
 static void on_Exception(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
@@ -136,27 +146,33 @@ static void on_Exception(jvmtiEnv *jvmti_env,
             jlocation location,
             jobject exception,
             jmethodID catch_method,
-            jlocation catch_location) { }
+            jlocation catch_location)
+{ /* TODO */ }
 static void on_ExceptionCatch(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
             jmethodID method,
             jlocation location,
-            jobject exception) { }
+            jobject exception)
+{ /* TODO */ }
 static void on_ThreadStart(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
-            jthread thread) { }
+            jthread thread)
+{ /* TODO */ }
 static void on_ThreadEnd(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
-            jthread thread) { }
+            jthread thread)
+{ /* TODO */ }
 static void on_ClassLoad(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
-            jclass klass) { }
+            jclass klass)
+{ /* TODO */ }
 static void on_ClassPrepare(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jthread thread,
-            jclass klass) { }
+            jclass klass)
+{ /* TODO */ }
 static void on_ClassFileLoadHook(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jclass class_being_redefined,
@@ -166,9 +182,11 @@ static void on_ClassFileLoadHook(jvmtiEnv *jvmti_env,
             jint class_data_len,
             const unsigned char* class_data,
             jint* new_class_data_len,
-            unsigned char** new_class_data) {}
+            unsigned char** new_class_data)
+{ /* TODO */ }
 static void on_VMStart(jvmtiEnv *jvmti_env,
-            JNIEnv* jni_env) { }
+            JNIEnv* jni_env)
+{ /* TODO */ }
 static void on_VMInit(jvmtiEnv *jvmti,
             JNIEnv* jni,
             jthread thread) {
@@ -184,7 +202,8 @@ static void on_VMInit(jvmtiEnv *jvmti,
   if (jvmti_res != JVMTI_ERROR_NONE) {
     printf("Failed to start agent thread\n");
   }
-  OnJvmtiVmInit((uintptr_t)jvmti, (uintptr_t)jni, (uintptr_t)thread);
+  uintptr_t args[] = { (uintptr_t)thread };
+  OnJvmtiEvent(JVMTI_EVENT_VM_INIT, jvmti, jni, args, ARRAY_LEN(args));
 }
 
 static void on_VMDeath(jvmtiEnv *jvmti_env,
@@ -373,7 +392,7 @@ jint Agent_OnLoad(JavaVM* javaVM, char* options, void* reserved) {
     return JNI_ERR;
   }
 
-  GO_CALL(OnAgentLoad((void*)javaVM, options));
+  GO_CALL(OnAgentLoad((uintptr_t)javaVM, options));
 
   jvmtiEnv* jvmti = NULL;
   jvmtiError jvmti_res = (*javaVM)->GetEnv(javaVM, (void**)&jvmti, JVMTI_VERSION_1_1);
@@ -394,6 +413,8 @@ jint Agent_OnLoad(JavaVM* javaVM, char* options, void* reserved) {
 
 // destroy resources;
 void Agent_OnUnload(JavaVM* javaVM) {
+  GO_CALL(OnAgentUnload());
+
   jvmtiEnv* jvmti = NULL;
   jvmtiError jvmti_res = (*javaVM)->GetEnv(javaVM, (void**)&jvmti, JVMTI_VERSION_1_1);
   if (jvmti_res != JVMTI_ERROR_NONE || jvmti == NULL) {

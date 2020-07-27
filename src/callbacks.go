@@ -19,222 +19,293 @@ import "C"
 
 import (
 	"fmt"
-	"unsafe"
 )
 
+// JVMTI event ID definitions
+const (
+	JVMTI_MIN_EVENT_TYPE_VAL              = 50
+	JVMTI_EVENT_VM_INIT                   = 50
+	JVMTI_EVENT_VM_DEATH                  = 51
+	JVMTI_EVENT_THREAD_START              = 52
+	JVMTI_EVENT_THREAD_END                = 53
+	JVMTI_EVENT_CLASS_FILE_LOAD_HOOK      = 54
+	JVMTI_EVENT_CLASS_LOAD                = 55
+	JVMTI_EVENT_CLASS_PREPARE             = 56
+	JVMTI_EVENT_VM_START                  = 57
+	JVMTI_EVENT_EXCEPTION                 = 58
+	JVMTI_EVENT_EXCEPTION_CATCH           = 59
+	JVMTI_EVENT_SINGLE_STEP               = 60
+	JVMTI_EVENT_FRAME_POP                 = 61
+	JVMTI_EVENT_BREAKPOINT                = 62
+	JVMTI_EVENT_FIELD_ACCESS              = 63
+	JVMTI_EVENT_FIELD_MODIFICATION        = 64
+	JVMTI_EVENT_METHOD_ENTRY              = 65
+	JVMTI_EVENT_METHOD_EXIT               = 66
+	JVMTI_EVENT_NATIVE_METHOD_BIND        = 67
+	JVMTI_EVENT_COMPILED_METHOD_LOAD      = 68
+	JVMTI_EVENT_COMPILED_METHOD_UNLOAD    = 69
+	JVMTI_EVENT_DYNAMIC_CODE_GENERATED    = 70
+	JVMTI_EVENT_DATA_DUMP_REQUEST         = 71
+	JVMTI_EVENT_MONITOR_WAIT              = 73
+	JVMTI_EVENT_MONITOR_WAITED            = 74
+	JVMTI_EVENT_MONITOR_CONTENDED_ENTER   = 75
+	JVMTI_EVENT_MONITOR_CONTENDED_ENTERED = 76
+	JVMTI_EVENT_RESOURCE_EXHAUSTED        = 80
+	JVMTI_EVENT_GARBAGE_COLLECTION_START  = 81
+	JVMTI_EVENT_GARBAGE_COLLECTION_FINISH = 82
+	JVMTI_EVENT_OBJECT_FREE               = 83
+	JVMTI_EVENT_VM_OBJECT_ALLOC           = 84
+	JVMTI_MAX_EVENT_TYPE_VAL              = 84
+)
+
+// JvmtiCallbacks holds the JVMTI event callbacks
+type JvmtiCallbacks struct {
+	/*
+	   static void on_Breakpoint(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method,
+	   	jlocation location) { }
+	*/
+	onJvmtiBreakpoint func(jvmti, jni, thread, method, loc uintptr)
+
+	/*
+	   static void on_SingleStep(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method,
+	   	jlocation location) { }
+	*/
+	onJvmtiSingleStep func(jvmti, jni, thread, method, loc uintptr)
+
+	/*
+	   static void on_FieldAccess(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method,
+	   	jlocation location,
+	   	jclass field_klass,
+	   	jobject object,
+	   	jfieldID field) { }
+	*/
+	onJvmtiFieldAccess func(jvmti, jni, method, loc, fclazz, obj, field uintptr)
+
+	/*
+	   static void on_FieldModification(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method,
+	   	jlocation location,
+	   	jclass field_klass,
+	   	jobject object,
+	   	jfieldID field,
+	   	char signature_type,
+	   	jvalue new_value) {}
+	*/
+	onJvmtiFieldModification func(jvmti, jni, thread, method, loc, fklazz, obj, field, sig, newval uintptr)
+
+	/*
+	   static void on_FramePop(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method,
+	   	jboolean was_popped_by_exception) {}
+	*/
+	onJvmtiFramePop func(jvmti, jni, thread, method uintptr, by_excep bool)
+
+	/*
+	   static void on_MethodEntry(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method) {}
+	*/
+	onJvmtiMethodEntry func(jvmi, jni, thread, method uintptr)
+
+	/*
+	   static void on_MethodExit(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method,
+	   	jboolean was_popped_by_exception,
+	   	jvalue return_value) {}
+	*/
+	onJvmtiMethodExit func(jvmti, jni, thread, method uintptr, by_excep bool, ret_val uintptr)
+
+	/*
+	   static void on_NativeMethodBind(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method,
+	   	void* address,
+	   	void** new_address_ptr) { }
+	*/
+	onJvmtiNativeMethodBind func(jvmti, jni, thread, method, addr, new_addr_ptr uintptr)
+
+	/*
+	   static void on_Exception(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method,
+	   	jlocation location,
+	   	jobject exception,
+	   	jmethodID catch_method,
+	   	jlocation catch_location) { }
+	*/
+	onJvmtiException func(jvmti, jni, thread, method, location, exception, catch_m, catch_l uintptr)
+
+	/*
+	   static void on_ExceptionCatch(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jmethodID method,
+	   	jlocation location,
+	   	jobject exception) { }
+	*/
+	onJvmtiExceptionCatch func(jvmti, jni, thread, method, location, exception uintptr)
+
+	/*
+	   static void on_ThreadStart(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread) { }
+	*/
+	onJvmtiThreadStart func(jvmti JvmtiEnv, jni JniEnv, thread uintptr)
+
+	/*
+	   static void on_ThreadEnd(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread) { }
+	*/
+	onJvmtiThreadEnd func(jvmti, jni, thread uintptr)
+
+	/*
+	   static void on_ClassLoad(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jclass klass) { }
+	*/
+	OnJvmtiClassLoad func(jvmti, jni, thread, klass uintptr)
+
+	/*
+	   static void on_ClassPrepare(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jthread thread,
+	   	jclass klass) { }
+	*/
+	onJvmtiClassPrepare func(jvmti, jni, thread, klass uintptr)
+
+	/*
+	   static void on_ClassFileLoadHook(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env,
+	   	jclass class_being_redefined,
+	   	jobject loader,
+	   	const char* name,
+	   	jobject protection_domain,
+	   	jint class_data_len,
+	   	const unsigned char* class_data,
+	   	jint* new_class_data_len,
+	   	unsigned char** new_class_data) {}
+	*/
+	onJvmtiClassFileLoadHook func(jvmti, jni, cls_defined, loader, name, pd uintptr,
+		clsd_len int32,
+		class_data, new_data_len, new_data uintptr)
+
+	/*
+	   static void on_VMStart(jvmtiEnv *jvmti_env,
+	   	JNIEnv* jni_env) { }
+	*/
+	onJvmtiVmStart func(jvmti, jni uintptr)
+
+	/*
+	   static void on_VMInit(jvmtiEnv *jvmti,
+	   	JNIEnv* jni,
+	   	jthread thread)*/
+	onJvmtiVmInit func(jvmti JvmtiEnv, jni JniEnv, thread uintptr)
+}
+
+// SetVmInitCallback sets callback function for VMInit event
+func (callbacks *JvmtiCallbacks) SetVmInitCallback(fn func(jvmti JvmtiEnv, jni JniEnv, thrd uintptr)) {
+	callbacks.onJvmtiVmInit = fn
+}
+
 //export OnJvmtiEvent
-func OnJvmtiEvent(eventId int, jvmti, jni, params unsafe.Pointer, paramsLen int) {
+func OnJvmtiEvent(eventId int, jvmti, jni, params uintptr, paramsLen int) {
+	if _lib == nil {
+		return
+	}
+	callbacks := _lib.GetCallbacks()
+	jvmtiEnv := JvmtiEnv(jvmti)
+	jniEnv := JniEnv(jni)
 
-}
+	switch eventId {
+	case JVMTI_EVENT_VM_INIT:
+		if callbacks.onJvmtiVmInit != nil {
+			callbacks.onJvmtiVmInit(jvmtiEnv, jniEnv, 0)
+		}
 
-/*
-static void on_Breakpoint(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method,
-	jlocation location) { }
-*/
-//export OnJvmtiBreakpoint
-func OnJvmtiBreakpoint(jvmti, jni, thread, method, loc uintptr) {
-	fmt.Println("OnJvmtiBreakpoint")
-}
+	case JVMTI_EVENT_VM_DEATH:
 
-/*
-static void on_SingleStep(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method,
-	jlocation location) { }
-*/
-//export OnJvmtiSingleStep
-func OnJvmtiSingleStep(jvmti, jni, thread, method, loc uintptr) {
-	fmt.Println("OnJvmtiSingleStep")
-}
+	case JVMTI_EVENT_THREAD_START:
+		if callbacks.onJvmtiThreadStart != nil {
+			callbacks.onJvmtiThreadStart(jvmtiEnv, jniEnv, 0)
+		}
 
-/*
-static void on_FieldAccess(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method,
-	jlocation location,
-	jclass field_klass,
-	jobject object,
-	jfieldID field) { }
-*/
-//export OnJvmtiFieldAccess
-func OnJvmtiFieldAccess(jvmti, jni, method, loc, fclazz, obj, field uintptr) {
-	fmt.Println("OnJvmtiFieldAccess")
-}
+	case JVMTI_EVENT_THREAD_END:
 
-/*
-static void on_FieldModification(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method,
-	jlocation location,
-	jclass field_klass,
-	jobject object,
-	jfieldID field,
-	char signature_type,
-	jvalue new_value) {}
-*/
-//export OnJvmtiFieldModification
-func OnJvmtiFieldModification(jvmti, jni, thread, method, loc, fklazz, obj, field, sig, newval uintptr) {
-	fmt.Println("OnJvmtiFieldModification")
-}
+	case JVMTI_EVENT_CLASS_FILE_LOAD_HOOK:
 
-/*
-static void on_FramePop(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method,
-	jboolean was_popped_by_exception) {}
-*/
-//export OnJvmtiFramePop
-func OnJvmtiFramePop(jvmti, jni, thread, method uintptr, by_excep bool) {
-	fmt.Println("OnJvmtiFramePop")
-}
+	case JVMTI_EVENT_CLASS_LOAD:
 
-/*
-static void on_MethodEntry(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method) {}
-*/
-//export OnJvmtiMethodEntry
-func OnJvmtiMethodEntry(jvmi, jni, thread, method uintptr) {
-	fmt.Println("OnJvmtiMethodEntry")
-}
+	case JVMTI_EVENT_CLASS_PREPARE:
 
-/*
-static void on_MethodExit(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method,
-	jboolean was_popped_by_exception,
-	jvalue return_value) {}
-*/
-//export OnJvmtiMethodExit
-func OnJvmtiMethodExit(jvmti, jni, thread, method uintptr, by_excep bool, ret_val uintptr) {
-	fmt.Println("OnJvmtiMethodExit")
-}
+	case JVMTI_EVENT_VM_START:
 
-/*
-static void on_NativeMethodBind(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method,
-	void* address,
-	void** new_address_ptr) { }
-*/
-//export OnJvmtiNativeMethodBind
-func OnJvmtiNativeMethodBind(jvmti, jni, thread, method, addr, new_addr_ptr uintptr) {
-	fmt.Println("OnJvmtiNativeMethodBind")
-}
+	case JVMTI_EVENT_EXCEPTION:
 
-/*
-static void on_Exception(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method,
-	jlocation location,
-	jobject exception,
-	jmethodID catch_method,
-	jlocation catch_location) { }
-*/
-//export OnJvmtiException
-func OnJvmtiException(jvmti, jni, thread, method, location, exception, catch_m, catch_l uintptr) {
-	fmt.Println("OnJvmtiException")
-}
+	case JVMTI_EVENT_EXCEPTION_CATCH:
 
-/*
-static void on_ExceptionCatch(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jmethodID method,
-	jlocation location,
-	jobject exception) { }
-*/
-//export OnJvmtiExceptionCatch
-func OnJvmtiExceptionCatch(jvmti, jni, thread, method, location, exception uintptr) {
-	fmt.Println("OnJvmtiExceptionCatch")
-}
+	case JVMTI_EVENT_SINGLE_STEP:
 
-/*
-static void on_ThreadStart(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread) { }
-*/
-//export OnJvmtiThreadStart
-func OnJvmtiThreadStart(jvmti, jni, thread uintptr) {
-	fmt.Println("OnJvmtiThreadStart")
-}
+	case JVMTI_EVENT_FRAME_POP:
 
-/*
-static void on_ThreadEnd(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread) { }
-*/
-//export OnJvmtiThreadEnd
-func OnJvmtiThreadEnd(jvmti, jni, thread uintptr) {
-	fmt.Println("OnJvmtiThreadEnd")
-}
+	case JVMTI_EVENT_BREAKPOINT:
 
-/*
-static void on_ClassLoad(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jclass klass) { }
-*/
-//export OnJvmtiClassLoad
-func OnJvmtiClassLoad(jvmti, jni, thread, klass uintptr) {
-	fmt.Println("OnJvmtiClassLoad")
-}
+	case JVMTI_EVENT_FIELD_ACCESS:
 
-/*
-static void on_ClassPrepare(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jthread thread,
-	jclass klass) { }
-*/
-//export OnJvmtiClassPrepare
-func OnJvmtiClassPrepare(jvmti, jni, thread, klass uintptr) {
-	fmt.Println("OnJvmtiClassPrepare")
-}
+	case JVMTI_EVENT_FIELD_MODIFICATION:
 
-/*
-static void on_ClassFileLoadHook(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env,
-	jclass class_being_redefined,
-	jobject loader,
-	const char* name,
-	jobject protection_domain,
-	jint class_data_len,
-	const unsigned char* class_data,
-	jint* new_class_data_len,
-	unsigned char** new_class_data) {}
-*/
-//export OnJvmtiClassFileLoadHook
-func OnJvmtiClassFileLoadHook(jvmti, jni, cls_defined, loader, name, pd uintptr,
-	clsd_len int32,
-	class_data, new_data_len, new_data uintptr) {
-	fmt.Println("OnJvmtiClassFileLoadHook")
-}
+	case JVMTI_EVENT_METHOD_ENTRY:
 
-/*
-static void on_VMStart(jvmtiEnv *jvmti_env,
-	JNIEnv* jni_env) { }
-*/
-//export OnJvmtiVmStart
-func OnJvmtiVmStart(jvmti, jni uintptr) {
-	fmt.Println("OnJvmtiVmInit()\n")
-}
+	case JVMTI_EVENT_METHOD_EXIT:
 
-/*
-static void on_VMInit(jvmtiEnv *jvmti,
-	JNIEnv* jni,
-	jthread thread)*/
-//export OnJvmtiVmInit
-func OnJvmtiVmInit(jvmti, jni, thread uintptr) {
-	fmt.Println("OnJvmtiVmInit()\n")
+	case JVMTI_EVENT_NATIVE_METHOD_BIND:
+
+	case JVMTI_EVENT_COMPILED_METHOD_LOAD:
+
+	case JVMTI_EVENT_COMPILED_METHOD_UNLOAD:
+
+	case JVMTI_EVENT_DYNAMIC_CODE_GENERATED:
+
+	case JVMTI_EVENT_DATA_DUMP_REQUEST:
+
+	case JVMTI_EVENT_MONITOR_WAIT:
+
+	case JVMTI_EVENT_MONITOR_WAITED:
+
+	case JVMTI_EVENT_MONITOR_CONTENDED_ENTER:
+
+	case JVMTI_EVENT_MONITOR_CONTENDED_ENTERED:
+
+	case JVMTI_EVENT_RESOURCE_EXHAUSTED:
+
+	case JVMTI_EVENT_GARBAGE_COLLECTION_START:
+
+	case JVMTI_EVENT_GARBAGE_COLLECTION_FINISH:
+
+	case JVMTI_EVENT_OBJECT_FREE:
+
+	case JVMTI_EVENT_VM_OBJECT_ALLOC:
+
+	default:
+		fmt.Println("Unkown event ID!")
+	}
 }
