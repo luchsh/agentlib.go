@@ -69,7 +69,7 @@ type JvmtiCallbacks struct {
 	   	jmethodID method,
 	   	jlocation location) { }
 	*/
-	onJvmtiBreakpoint func(jvmti, jni, thread, method, loc uintptr)
+	onJvmtiBreakpoint func(jvmti JvmtiEnv, jni JniEnv, thread, method, loc uintptr)
 
 	/*
 	   static void on_SingleStep(jvmtiEnv *jvmti_env,
@@ -78,7 +78,7 @@ type JvmtiCallbacks struct {
 	   	jmethodID method,
 	   	jlocation location) { }
 	*/
-	onJvmtiSingleStep func(jvmti, jni, thread, method, loc uintptr)
+	onJvmtiSingleStep func(jvmti JvmtiEnv, jni JniEnv, thread, method, loc uintptr)
 
 	/*
 	   static void on_FieldAccess(jvmtiEnv *jvmti_env,
@@ -90,7 +90,7 @@ type JvmtiCallbacks struct {
 	   	jobject object,
 	   	jfieldID field) { }
 	*/
-	onJvmtiFieldAccess func(jvmti, jni, method, loc, fclazz, obj, field uintptr)
+	onJvmtiFieldAccess func(jvmti JvmtiEnv, jni JniEnv, method, loc, fclazz, obj, field uintptr)
 
 	/*
 	   static void on_FieldModification(jvmtiEnv *jvmti_env,
@@ -104,7 +104,7 @@ type JvmtiCallbacks struct {
 	   	char signature_type,
 	   	jvalue new_value) {}
 	*/
-	onJvmtiFieldModification func(jvmti, jni, thread, method, loc, fklazz, obj, field, sig, newval uintptr)
+	onJvmtiFieldModification func(jvmti JvmtiEnv, jni JniEnv, thread, method, loc, fklazz, obj, field, sig, newval uintptr)
 
 	/*
 	   static void on_FramePop(jvmtiEnv *jvmti_env,
@@ -113,7 +113,7 @@ type JvmtiCallbacks struct {
 	   	jmethodID method,
 	   	jboolean was_popped_by_exception) {}
 	*/
-	onJvmtiFramePop func(jvmti, jni, thread, method uintptr, by_excep bool)
+	onJvmtiFramePop func(jvmti JvmtiEnv, jni JniEnv, thread, method uintptr, by_excep bool)
 
 	/*
 	   static void on_MethodEntry(jvmtiEnv *jvmti_env,
@@ -121,7 +121,7 @@ type JvmtiCallbacks struct {
 	   	jthread thread,
 	   	jmethodID method) {}
 	*/
-	onJvmtiMethodEntry func(jvmi, jni, thread, method uintptr)
+	onJvmtiMethodEntry func(jvmti JvmtiEnv, jni JniEnv, thread, method uintptr)
 
 	/*
 	   static void on_MethodExit(jvmtiEnv *jvmti_env,
@@ -131,7 +131,7 @@ type JvmtiCallbacks struct {
 	   	jboolean was_popped_by_exception,
 	   	jvalue return_value) {}
 	*/
-	onJvmtiMethodExit func(jvmti, jni, thread, method uintptr, by_excep bool, ret_val uintptr)
+	onJvmtiMethodExit func(jvmti JvmtiEnv, jni JniEnv, thread, method uintptr, by_excep bool, ret_val uintptr)
 
 	/*
 	   static void on_NativeMethodBind(jvmtiEnv *jvmti_env,
@@ -141,7 +141,7 @@ type JvmtiCallbacks struct {
 	   	void* address,
 	   	void** new_address_ptr) { }
 	*/
-	onJvmtiNativeMethodBind func(jvmti, jni, thread, method, addr, new_addr_ptr uintptr)
+	onJvmtiNativeMethodBind func(jvmti JvmtiEnv, jni JniEnv, thread, method, addr, new_addr_ptr uintptr)
 
 	/*
 	   static void on_Exception(jvmtiEnv *jvmti_env,
@@ -153,7 +153,7 @@ type JvmtiCallbacks struct {
 	   	jmethodID catch_method,
 	   	jlocation catch_location) { }
 	*/
-	onJvmtiException func(jvmti, jni, thread, method, location, exception, catch_m, catch_l uintptr)
+	onJvmtiException func(jvmti JvmtiEnv, jni JniEnv, thread, method, location, exception, catch_m, catch_l uintptr)
 
 	/*
 	   static void on_ExceptionCatch(jvmtiEnv *jvmti_env,
@@ -163,7 +163,7 @@ type JvmtiCallbacks struct {
 	   	jlocation location,
 	   	jobject exception) { }
 	*/
-	onJvmtiExceptionCatch func(jvmti, jni, thread, method, location, exception uintptr)
+	onJvmtiExceptionCatch func(jvmti JvmtiEnv, jni JniEnv, thread, method, location, exception uintptr)
 
 	/*
 	   static void on_ThreadStart(jvmtiEnv *jvmti_env,
@@ -177,7 +177,7 @@ type JvmtiCallbacks struct {
 	   	JNIEnv* jni_env,
 	   	jthread thread) { }
 	*/
-	onJvmtiThreadEnd func(jvmti, jni, thread uintptr)
+	onJvmtiThreadEnd func(jvmti JvmtiEnv, jni JniEnv, thread uintptr)
 
 	/*
 	   static void on_ClassLoad(jvmtiEnv *jvmti_env,
@@ -185,7 +185,7 @@ type JvmtiCallbacks struct {
 	   	jthread thread,
 	   	jclass klass) { }
 	*/
-	OnJvmtiClassLoad func(jvmti, jni, thread, klass uintptr)
+	onJvmtiClassLoad func(jvmti JvmtiEnv, jni JniEnv, thread, klass uintptr)
 
 	/*
 	   static void on_ClassPrepare(jvmtiEnv *jvmti_env,
@@ -193,7 +193,7 @@ type JvmtiCallbacks struct {
 	   	jthread thread,
 	   	jclass klass) { }
 	*/
-	onJvmtiClassPrepare func(jvmti, jni, thread, klass uintptr)
+	onJvmtiClassPrepare func(jvmti JvmtiEnv, jni JniEnv, thread, klass uintptr)
 
 	/*
 	   static void on_ClassFileLoadHook(jvmtiEnv *jvmti_env,
@@ -207,7 +207,7 @@ type JvmtiCallbacks struct {
 	   	jint* new_class_data_len,
 	   	unsigned char** new_class_data) {}
 	*/
-	onJvmtiClassFileLoadHook func(jvmti, jni, cls_defined, loader, name, pd uintptr,
+	onJvmtiClassFileLoadHook func(jvmti JvmtiEnv, jni JniEnv, cls_defined, loader, name, pd uintptr,
 		clsd_len int32,
 		class_data, new_data_len, new_data uintptr)
 
@@ -215,13 +215,16 @@ type JvmtiCallbacks struct {
 	   static void on_VMStart(jvmtiEnv *jvmti_env,
 	   	JNIEnv* jni_env) { }
 	*/
-	onJvmtiVmStart func(jvmti, jni uintptr)
+	onJvmtiVmStart func(jvmti JvmtiEnv, jni JniEnv)
 
 	/*
 	   static void on_VMInit(jvmtiEnv *jvmti,
 	   	JNIEnv* jni,
 	   	jthread thread)*/
 	onJvmtiVmInit func(jvmti JvmtiEnv, jni JniEnv, thread uintptr)
+
+	// not a standard JVMTI callback
+	onAgentUnload func()
 }
 
 // SetVmInitCallback sets callback function for VMInit event
@@ -231,6 +234,33 @@ func (callbacks *JvmtiCallbacks) SetVmInitCallback(fn func(JvmtiEnv, JniEnv, uin
 	C.EnableJvmtiCallback(jvmti, JVMTI_EVENT_VM_INIT)
 }
 
+func (callbacks *JvmtiCallbacks) SetClassLoadCallback(fn func(JvmtiEnv, JniEnv, uintptr, uintptr)) {
+	callbacks.onJvmtiClassLoad = fn
+	jvmti := unsafe.Pointer(_lib.jvmti)
+	C.EnableJvmtiCallback(jvmti, JVMTI_EVENT_CLASS_PREPARE)
+}
+
+type rawArray struct {
+	base uintptr
+	len int
+	eSize int
+}
+
+func newRawArray(b uintptr, l int) *rawArray {
+	ar := new(rawArray)
+	ar.base = b
+	ar.len = l
+	ar.eSize = int(unsafe.Sizeof(ar.base))
+	return ar
+}
+
+func (arr *rawArray) ptrAt(idx int) uintptr {
+	p := arr.base + uintptr(arr.eSize * idx)
+	return *(*uintptr)(unsafe.Pointer(p))
+}
+
+// OnJvmtiEvent dispatches all the event to corresponding Go handlers
+// runs on a JavaThread
 //export OnJvmtiEvent
 func OnJvmtiEvent(eventId int, jvmti, jni, params uintptr, paramsLen int) {
 	if _lib == nil {
@@ -239,27 +269,44 @@ func OnJvmtiEvent(eventId int, jvmti, jni, params uintptr, paramsLen int) {
 	callbacks := _lib.GetCallbacks()
 	jvmtiEnv := JvmtiEnv(jvmti)
 	jniEnv := JniEnv(jni)
+	ra := newRawArray(params, paramsLen)
 
 	switch eventId {
 	case JVMTI_EVENT_VM_INIT:
 		if callbacks.onJvmtiVmInit != nil {
-			callbacks.onJvmtiVmInit(jvmtiEnv, jniEnv, 0)
+			callbacks.onJvmtiVmInit(jvmtiEnv, jniEnv, ra.ptrAt(0))
 		}
 
 	case JVMTI_EVENT_VM_DEATH:
 
 	case JVMTI_EVENT_THREAD_START:
 		if callbacks.onJvmtiThreadStart != nil {
-			callbacks.onJvmtiThreadStart(jvmtiEnv, jniEnv, 0)
+			callbacks.onJvmtiThreadStart(jvmtiEnv, jniEnv, ra.ptrAt(0))
 		}
 
 	case JVMTI_EVENT_THREAD_END:
+		if callbacks.onJvmtiThreadEnd != nil {
+			callbacks.onJvmtiThreadEnd(jvmtiEnv, jniEnv, ra.ptrAt(0))
+		}
 
 	case JVMTI_EVENT_CLASS_FILE_LOAD_HOOK:
+		if callbacks.onJvmtiClassFileLoadHook != nil {
+			callbacks.onJvmtiClassFileLoadHook(jvmtiEnv, jniEnv,
+				ra.ptrAt(0), ra.ptrAt(1), ra.ptrAt(2), ra.ptrAt(3),
+				int32(ra.ptrAt(4)),
+				ra.ptrAt(5), ra.ptrAt(6), ra.ptrAt(7))
+		}
 
 	case JVMTI_EVENT_CLASS_LOAD:
+		fmt.Println("ClassLoad!")
+		if callbacks.onJvmtiClassLoad != nil {
+			callbacks.onJvmtiClassLoad(jvmtiEnv, jniEnv, ra.ptrAt(0), ra.ptrAt(1))
+		}
 
 	case JVMTI_EVENT_CLASS_PREPARE:
+		if callbacks.onJvmtiClassPrepare != nil {
+			callbacks.onJvmtiClassPrepare(jvmtiEnv, jniEnv, ra.ptrAt(0), ra.ptrAt(1))
+		}
 
 	case JVMTI_EVENT_VM_START:
 

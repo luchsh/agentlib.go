@@ -13,6 +13,9 @@ func AgentGoOnLoad(lib* AgentLib) {
 	lib.GetCallbacks().SetVmInitCallback(func(jvmti JvmtiEnv, jni JniEnv, thread uintptr) {
 		fmt.Println("GO: OnJvmtiVmInit(): triggered on Go level")
 	})
+	lib.GetCallbacks().SetClassLoadCallback(func(jvmti JvmtiEnv, jni JniEnv, thread, clazz uintptr){
+		fmt.Println("GO: ClassLoad event")
+	})
 }
 
 func AgentGoOnUnload() {

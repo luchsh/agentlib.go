@@ -155,24 +155,42 @@ static void on_ExceptionCatch(jvmtiEnv *jvmti_env,
             jlocation location,
             jobject exception)
 { /* TODO */ }
-static void on_ThreadStart(jvmtiEnv *jvmti_env,
-            JNIEnv* jni_env,
+
+static void on_ThreadStart(jvmtiEnv *jvmti,
+            JNIEnv* jni,
             jthread thread)
-{ /* TODO */ }
-static void on_ThreadEnd(jvmtiEnv *jvmti_env,
-            JNIEnv* jni_env,
+{
+  uintptr_t args[] = { (uintptr_t)thread };
+  OnJvmtiEvent(JVMTI_EVENT_THREAD_START, jvmti, jni, args, ARRAY_LEN(args));
+}
+
+static void on_ThreadEnd(jvmtiEnv *jvmti,
+            JNIEnv* jni,
             jthread thread)
-{ /* TODO */ }
-static void on_ClassLoad(jvmtiEnv *jvmti_env,
-            JNIEnv* jni_env,
+{
+  uintptr_t args[] = { (uintptr_t)thread };
+  OnJvmtiEvent(JVMTI_EVENT_THREAD_END, jvmti, jni, args, ARRAY_LEN(args));
+}
+
+static void on_ClassLoad(jvmtiEnv *jvmti,
+            JNIEnv* jni,
             jthread thread,
             jclass klass)
-{ /* TODO */ }
-static void on_ClassPrepare(jvmtiEnv *jvmti_env,
-            JNIEnv* jni_env,
+{
+  DEBUG(printf("C: on_ClassLoad\n"));
+  uintptr_t args[] = { (uintptr_t)thread, (uintptr_t)klass };
+  OnJvmtiEvent(JVMTI_EVENT_CLASS_LOAD, jvmti, jni, args, ARRAY_LEN(args));
+}
+
+static void on_ClassPrepare(jvmtiEnv *jvmti,
+            JNIEnv* jni,
             jthread thread,
             jclass klass)
-{ /* TODO */ }
+{
+  uintptr_t args[] = { (uintptr_t)thread, (uintptr_t)klass };
+  OnJvmtiEvent(JVMTI_EVENT_CLASS_PREPARE, jvmti, jni, args, ARRAY_LEN(args));
+}
+
 static void on_ClassFileLoadHook(jvmtiEnv *jvmti_env,
             JNIEnv* jni_env,
             jclass class_being_redefined,
@@ -259,6 +277,7 @@ static void on_GarbageCollectionFinish(jvmtiEnv *jvmti_env) {}
 
 // Setup JVMTI callbacks
 static void linkLocalJvmtiCallback(int event_id) {
+
   // link event id
   switch (event_id) {
 	  case JVMTI_EVENT_VM_INIT:
@@ -369,7 +388,7 @@ void EnableJvmtiCallback(void* p, int event_id) {
     printf("NULL jvmtiEnv pointer\n");
     return;
   }
-
+ 
   linkLocalJvmtiCallback(event_id);
 
   jvmtiError jvmti_res = (*jvmti)->SetEventCallbacks(jvmti, _callbacks, sizeof(jvmtiEventCallbacks));
@@ -382,6 +401,7 @@ void EnableJvmtiCallback(void* p, int event_id) {
     printf("Failed to set jvmti callbacks\n");
     return;
   }
+  DEBUG(printf("C: enabled event id %d\n", event_id));
 }
 
 // JVMTI start-up point

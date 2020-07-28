@@ -49,7 +49,9 @@ func OnAgentLoad(javaVM, jvmti uintptr, options *C.char) {
 
 //export OnAgentUnload
 func OnAgentUnload() int32 {
-	AgentGoOnUnload()
+	if _lib.callbacks.onAgentUnload != nil {
+		_lib.callbacks.onAgentUnload()
+	}
 	return 0
 }
 
