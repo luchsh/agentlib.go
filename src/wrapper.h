@@ -70,7 +70,17 @@ extern "C" {
 	f(JVMTI_EVENT_GARBAGE_COLLECTION_START)  \
 	f(JVMTI_EVENT_GARBAGE_COLLECTION_FINISH) \
 	f(JVMTI_EVENT_OBJECT_FREE)               \
-	f(JVMTI_EVENT_VM_OBJECT_ALLOC)
+	f(JVMTI_EVENT_VM_OBJECT_ALLOC)           \
+
+// Fake event definition
+enum {
+  JVMTI_MIN_FAKE_EVENT_TYPE_VAL   = 100,
+  JVMTI_EVENT_AGENT_UNLOAD        = JVMTI_MIN_FAKE_EVENT_TYPE_VAL,
+  JVMTI_MAX_FAKE_EVENT_TYPE_VAL   = JVMTI_EVENT_AGENT_UNLOAD,
+};
+
+#define FOR_EACH_FAKE_JVMTI_EVENT(f)    \
+  f(JVMTI_EVENT_AGENT_UNLOAD)           \
 
 // Enable a JVMTI event notification
 // @arg p         Pointer to jvmtiEnv*, using uintptr_t to make it easier to be called from Go

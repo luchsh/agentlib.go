@@ -50,7 +50,7 @@ static void
 go_bridge_thread_entry(jvmtiEnv* jvmti_env,
                        JNIEnv* jni_env,
                        void* arg) {
-  DEBUG(printf("Bridge thread started\n"));
+  DEBUG(printf("C: Bridge thread started\n"));
 
   // enter Go realm
   GO_CALL(MainForwardLoop());
@@ -134,38 +134,43 @@ static size_t nof_args_for_event[] = {
     1, /* JVMTI_EVENT_GARBAGE_COLLECTION_FINISH = 82, */
     2, /* JVMTI_EVENT_OBJECT_FREE = 83, */
     6, /* JVMTI_EVENT_VM_OBJECT_ALLOC = 84, */
+    // Below are fake
+    0, /* JVMTI_EVENT_AGENT_UNLOAD = 85, */
 };
 
 // Handler generator MACRO.
 // Can be simplified using C++ template function
 //   `template<int EventId> void onJvmtiEvent(jvmtiEnv* jvmti, ...);`
 // but it may involve SWIG, a little complex, do it later.
-#define GEN_JVMTI_EVENT_HANDLER(EVENT) \
-  static void onJvmtiEvent_ ## EVENT(jvmtiEnv* jvmti, ...) { \
-    DEBUG(printf("C: event " #EVENT " triggerred\n")); \
-    size_t nof_args = nof_args_for_event[EVENT - JVMTI_MIN_EVENT_TYPE_VAL] - 1 /* rm jvmti */; \
-    uintptr_t args[nof_args]; \
-    va_list ap; \
-    va_start(ap, jvmti); \
-    for (int i = 0; i < nof_args; ++i) { \
-      args[i] = va_arg(ap, uintptr_t); \
-    } \
-    va_end(ap); \
-    if (EVENT == JVMTI_EVENT_VM_INIT) { \
-      __internalOnVMInit(jvmti, (JNIEnv*)(args[0]), (jthread)(args[1]));\
-    } \
-    OnJvmtiEvent(EVENT, jvmti, args, ARRAY_LEN(args)); \
+#define GEN_JVMTI_EVENT_HANDLER(EVENT)                                    \
+  static void onJvmtiEvent_ ## EVENT(jvmtiEnv* jvmti, ...) {              \
+    DEBUG(printf("C: event " #EVENT " triggerred\n"));                    \
+    size_t idx = EVENT - JVMTI_MIN_EVENT_TYPE_VAL;                        \
+    size_t nof_args = nof_args_for_event[idx] - 1 /* rm jvmti */;         \
+    uintptr_t args[nof_args];                                             \
+    va_list ap;                                                           \
+    va_start(ap, jvmti);                                                  \
+    for (int i = 0; i < nof_args; ++i) {                                  \
+      args[i] = va_arg(ap, uintptr_t);                                    \
+    }                                                                     \
+    va_end(ap);                                                           \
+    if (EVENT == JVMTI_EVENT_VM_INIT) {                                   \
+      __internalOnVMInit(jvmti, (JNIEnv*)(args[0]), (jthread)(args[1]));  \
+    }                                                                     \
+    OnJvmtiEvent(EVENT, jvmti, args, ARRAY_LEN(args));                    \
   }
 
 // Generate event handler methods
 FOR_EACH_JVMTI_EVENT(GEN_JVMTI_EVENT_HANDLER)
 
-#define NOF_JVMTI_EVENTS  (JVMTI_MAX_EVENT_TYPE_VAL - JVMTI_MIN_EVENT_TYPE_VAL + 1)
-
 // a table to quickly map event index to corresponding handler method
+#define NOF_JVMTI_EVENTS  (JVMTI_MAX_EVENT_TYPE_VAL - JVMTI_MIN_EVENT_TYPE_VAL + 1)
 #define EXPAND_JVMTI_EVENT_HANDLER(EVENT) (&onJvmtiEvent_##EVENT),
 static void* builtin_handler_table[NOF_JVMTI_EVENTS] = {
   FOR_EACH_JVMTI_EVENT(EXPAND_JVMTI_EVENT_HANDLER)
+  /* fake events has separated entry */
+  // TODO: wrong index
+  &Agent_OnUnload, // JVMTI_EVENT_AGENT_UNLOAD
 };
 
 // a table containing all jvmti event names
@@ -174,11 +179,20 @@ static const char* jvmti_event_names[NOF_JVMTI_EVENTS] = {
   FOR_EACH_JVMTI_EVENT(JVMTI_EVENT_NAME)
 };
 
+#define NOF_FAKE_JVMTI_EVENTS   (JVMTI_MAX_FAKE_EVENT_TYPE_VAL - JVMTI_MIN_EVENT_TYPE_VAL + 1)
+static const char* jvmti_fake_event_names[NOF_FAKE_JVMTI_EVENTS] = {
+  FOR_EACH_FAKE_JVMTI_EVENT(JVMTI_EVENT_NAME)
+};
+
 static const char* get_jvmti_event_name(int event_id) {
   if (event_id <= JVMTI_MAX_EVENT_TYPE_VAL && event_id >= JVMTI_MIN_EVENT_TYPE_VAL) {
     int idx = event_id - JVMTI_MIN_EVENT_TYPE_VAL;
     return jvmti_event_names[idx];
+  } else if (event_id <= JVMTI_MAX_FAKE_EVENT_TYPE_VAL && event_id >= JVMTI_MIN_FAKE_EVENT_TYPE_VAL) {
+    int idx = event_id - JVMTI_MIN_FAKE_EVENT_TYPE_VAL;
+    return jvmti_fake_event_names[idx];
   }
+  DEBUG(printf("C: no name for event id %d\n", event_id));
   return NULL;
 }
 
@@ -192,28 +206,32 @@ static void linkLocalJvmtiCallback(int event_id) {
 
 void EnableJvmtiCallback(void* p, int event_id) {
   jvmtiEnv* jvmti = (jvmtiEnv*)p;
-  if (event_id < JVMTI_MIN_EVENT_TYPE_VAL || event_id > JVMTI_MAX_EVENT_TYPE_VAL) {
-    printf("Invalid jvmti event to enable: %d\n", event_id);
-    return;
-  }
-  if (jvmti == NULL) {
-    printf("NULL jvmtiEnv pointer\n");
-    return;
-  }
+  //printf("%d-%d-%d", JVMTI_MIN_EVENT_TYPE_VAL, event_id, JVMTI_MAX_EVENT_TYPE_VAL);
+  if (event_id >= JVMTI_MIN_EVENT_TYPE_VAL && event_id <= JVMTI_MAX_EVENT_TYPE_VAL) {
+    if (jvmti == NULL) {
+      printf("NULL jvmtiEnv pointer\n");
+      return;
+    }
  
-  linkLocalJvmtiCallback(event_id);
+    linkLocalJvmtiCallback(event_id);
 
-  jvmtiError jvmti_res = (*jvmti)->SetEventCallbacks(jvmti, _callbacks, sizeof(jvmtiEventCallbacks));
-  if (jvmti_res != JVMTI_ERROR_NONE) {
-    printf("Failed to set jvmti callbacks: %s\n", get_jvmti_event_name(event_id));
-    return;
+    jvmtiError jvmti_res = (*jvmti)->SetEventCallbacks(jvmti, _callbacks, sizeof(jvmtiEventCallbacks));
+    if (jvmti_res != JVMTI_ERROR_NONE) {
+      printf("Failed to set jvmti callbacks: %s\n", get_jvmti_event_name(event_id));
+      return;
+    }
+    jvmti_res = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE, event_id, NULL);
+    if (jvmti_res != JVMTI_ERROR_NONE) {
+      printf("Failed to set jvmti callback notification mode: %s\n", get_jvmti_event_name(event_id));
+      return;
+    }
+    DEBUG(printf("C: enabled event id=%d, name=%s\n", event_id, get_jvmti_event_name(event_id)));
+  } else if (event_id >= JVMTI_MIN_FAKE_EVENT_TYPE_VAL && event_id <= JVMTI_MAX_FAKE_EVENT_TYPE_VAL) {
+    // nothing to do
+    DEBUG(printf("C: enabled event id=%d, name=%s\n", event_id, get_jvmti_event_name(event_id)));
+  } else {
+    DEBUG(printf("C: invalid event id=%d, name=%s\n", event_id, get_jvmti_event_name(event_id)));
   }
-  jvmti_res = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE, event_id, NULL);
-  if (jvmti_res != JVMTI_ERROR_NONE) {
-    printf("Failed to set jvmti callback notification mode: %s\n", get_jvmti_event_name(event_id));
-    return;
-  }
-  DEBUG(printf("C: enabled event %s\n", get_jvmti_event_name(event_id)));
 }
 
 // JVMTI start-up point

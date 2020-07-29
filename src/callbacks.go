@@ -57,9 +57,16 @@ const (
 	JVMTI_EVENT_GARBAGE_COLLECTION_FINISH = 82
 	JVMTI_EVENT_OBJECT_FREE               = 83
 	JVMTI_EVENT_VM_OBJECT_ALLOC           = 84
+	JVMTI_MAX_EVENT_TYPE_VAL              = 84
+
+	// added in jdk11
+	// JVMTI_EVENT_SAMPLED_OBJECT_ALLOC      = 85
+
 	// Fake events
-	JVMTI_EVENT_AGENT_UNLOAD = 85
-	JVMTI_MAX_EVENT_TYPE_VAL = 85
+	JVMTI_MIN_FAKE_EVENT_TYPE_VAL = 100
+	JVMTI_EVENT_AGENT_UNLOAD      = 100
+	JVMTI_MAX_FAKE_EVENT_TYPE_VAL = 100
+	JVMTI_EVENT_TYPE_LIMIT        = 100
 )
 
 // JvmtiCallbacks holds the JVMTI event callbacks
@@ -69,19 +76,21 @@ type JvmtiCallbacks struct {
 }
 
 func (callbacks *JvmtiCallbacks) init() {
-	callbacks.cbs = make([]func(JvmtiEnv, ...JvmtiArg), JVMTI_MAX_EVENT_TYPE_VAL-JVMTI_MIN_EVENT_TYPE_VAL+1)
+	callbacks.cbs = make([]func(JvmtiEnv, ...JvmtiArg), JVMTI_EVENT_TYPE_LIMIT-JVMTI_MIN_EVENT_TYPE_VAL+1)
 }
 
 type JvmtiArg uintptr
 
 // SetCallback links a go method to process a specific JVMTI event
 func (callbacks *JvmtiCallbacks) SetCallback(eventId int, fn func(JvmtiEnv, ...JvmtiArg)) {
-	if eventId > JVMTI_MAX_EVENT_TYPE_VAL || eventId < JVMTI_MIN_EVENT_TYPE_VAL {
-		fmt.Println("Bad event id ", eventId)
-		return
+	if eventId <= JVMTI_MAX_EVENT_TYPE_VAL && eventId >= JVMTI_MIN_EVENT_TYPE_VAL {
+		callbacks.cbs[eventId-JVMTI_MIN_EVENT_TYPE_VAL] = fn
+		C.EnableJvmtiCallback(unsafe.Pointer(_lib.jvmti), C.int(eventId))
+	} else if eventId <= JVMTI_MAX_FAKE_EVENT_TYPE_VAL && eventId >= JVMTI_MIN_FAKE_EVENT_TYPE_VAL {
+		C.EnableJvmtiCallback(unsafe.Pointer(_lib.jvmti), C.int(eventId))
+	} else {
+		fmt.Println("GO: Bad event id ", eventId)
 	}
-	callbacks.cbs[eventId-JVMTI_MIN_EVENT_TYPE_VAL] = fn
-	C.EnableJvmtiCallback(unsafe.Pointer(_lib.jvmti), C.int(eventId))
 }
 
 func (callbacks *JvmtiCallbacks) dispatch(eventId int, jvmti JvmtiEnv, args ...JvmtiArg) {
