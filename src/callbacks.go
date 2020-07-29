@@ -237,13 +237,20 @@ func (callbacks *JvmtiCallbacks) SetVmInitCallback(fn func(JvmtiEnv, JniEnv, uin
 func (callbacks *JvmtiCallbacks) SetClassLoadCallback(fn func(JvmtiEnv, JniEnv, uintptr, uintptr)) {
 	callbacks.onJvmtiClassLoad = fn
 	jvmti := unsafe.Pointer(_lib.jvmti)
+	C.EnableJvmtiCallback(jvmti, JVMTI_EVENT_CLASS_LOAD)
+}
+
+func (callbacks *JvmtiCallbacks) SetClassPrepareCallback(fn func(JvmtiEnv, JniEnv, uintptr, uintptr)) {
+	callbacks.onJvmtiClassLoad = fn
+	jvmti := unsafe.Pointer(_lib.jvmti)
 	C.EnableJvmtiCallback(jvmti, JVMTI_EVENT_CLASS_PREPARE)
 }
 
 type rawArray struct {
-	base uintptr
-	len int
+	base  uintptr
+	len   int
 	eSize int
+	idx   int
 }
 
 func newRawArray(b uintptr, l int) *rawArray {
@@ -255,57 +262,69 @@ func newRawArray(b uintptr, l int) *rawArray {
 }
 
 func (arr *rawArray) ptrAt(idx int) uintptr {
-	p := arr.base + uintptr(arr.eSize * idx)
+	p := arr.base + uintptr(arr.eSize*idx)
+	return *(*uintptr)(unsafe.Pointer(p))
+}
+
+func (arr *rawArray) next() uintptr {
+	if arr.idx >= arr.len {
+		return uintptr(0)
+	}
+	p := arr.base + uintptr(arr.eSize*arr.idx)
 	return *(*uintptr)(unsafe.Pointer(p))
 }
 
 // OnJvmtiEvent dispatches all the event to corresponding Go handlers
 // runs on a JavaThread
 //export OnJvmtiEvent
-func OnJvmtiEvent(eventId int, jvmti, jni, params uintptr, paramsLen int) {
+func OnJvmtiEvent(eventId int, jvmti, params uintptr, paramsLen int) {
 	if _lib == nil {
 		return
 	}
 	callbacks := _lib.GetCallbacks()
 	jvmtiEnv := JvmtiEnv(jvmti)
-	jniEnv := JniEnv(jni)
+	var jniEnv JniEnv
 	ra := newRawArray(params, paramsLen)
+
+	if eventId != JVMTI_EVENT_OBJECT_FREE && (eventId != JVMTI_EVENT_GARBAGE_COLLECTION_START && eventId != JVMTI_EVENT_GARBAGE_COLLECTION_FINISH) && (eventId > JVMTI_EVENT_DYNAMIC_CODE_GENERATED && eventId < JVMTI_EVENT_COMPILED_METHOD_LOAD) {
+		jniEnv = JniEnv(ra.next())
+	}
 
 	switch eventId {
 	case JVMTI_EVENT_VM_INIT:
 		if callbacks.onJvmtiVmInit != nil {
-			callbacks.onJvmtiVmInit(jvmtiEnv, jniEnv, ra.ptrAt(0))
+			callbacks.onJvmtiVmInit(jvmtiEnv, jniEnv, ra.next())
 		}
 
 	case JVMTI_EVENT_VM_DEATH:
 
 	case JVMTI_EVENT_THREAD_START:
 		if callbacks.onJvmtiThreadStart != nil {
-			callbacks.onJvmtiThreadStart(jvmtiEnv, jniEnv, ra.ptrAt(0))
+			callbacks.onJvmtiThreadStart(jvmtiEnv, jniEnv, ra.next())
 		}
 
 	case JVMTI_EVENT_THREAD_END:
 		if callbacks.onJvmtiThreadEnd != nil {
-			callbacks.onJvmtiThreadEnd(jvmtiEnv, jniEnv, ra.ptrAt(0))
+			callbacks.onJvmtiThreadEnd(jvmtiEnv, jniEnv, ra.next())
 		}
 
 	case JVMTI_EVENT_CLASS_FILE_LOAD_HOOK:
 		if callbacks.onJvmtiClassFileLoadHook != nil {
 			callbacks.onJvmtiClassFileLoadHook(jvmtiEnv, jniEnv,
-				ra.ptrAt(0), ra.ptrAt(1), ra.ptrAt(2), ra.ptrAt(3),
-				int32(ra.ptrAt(4)),
-				ra.ptrAt(5), ra.ptrAt(6), ra.ptrAt(7))
+				ra.next(), ra.next(), ra.next(), ra.next(),
+				int32(ra.next()),
+				ra.next(), ra.next(), ra.next())
 		}
 
 	case JVMTI_EVENT_CLASS_LOAD:
 		fmt.Println("ClassLoad!")
 		if callbacks.onJvmtiClassLoad != nil {
-			callbacks.onJvmtiClassLoad(jvmtiEnv, jniEnv, ra.ptrAt(0), ra.ptrAt(1))
+			callbacks.onJvmtiClassLoad(jvmtiEnv, jniEnv, ra.next(), ra.next())
 		}
 
 	case JVMTI_EVENT_CLASS_PREPARE:
 		if callbacks.onJvmtiClassPrepare != nil {
-			callbacks.onJvmtiClassPrepare(jvmtiEnv, jniEnv, ra.ptrAt(0), ra.ptrAt(1))
+			callbacks.onJvmtiClassPrepare(jvmtiEnv, jniEnv, ra.next(), ra.next())
 		}
 
 	case JVMTI_EVENT_VM_START:
