@@ -21,11 +21,11 @@ import "C"
 // AgentLib defines the information of a agent library
 type AgentLib struct {
 	// The unique instance of JavaVM
-	javaVM uintptr 
+	javaVM uintptr
 	// command line options to this agent
 	options string
 	// current jvmti env
-	jvmti	JvmtiEnv
+	jvmti JvmtiEnv
 	// Callbacks
 	callbacks JvmtiCallbacks
 }
@@ -44,14 +44,13 @@ func OnAgentLoad(javaVM, jvmti uintptr, options *C.char) {
 	_lib.javaVM = javaVM
 	_lib.options = C.GoString(options)
 	_lib.jvmti = JvmtiEnv(jvmti)
+	_lib.callbacks.init()
 	AgentGoOnLoad(_lib)
 }
 
 //export OnAgentUnload
 func OnAgentUnload() int32 {
-	if _lib.callbacks.onAgentUnload != nil {
-		_lib.callbacks.onAgentUnload()
-	}
+	_lib.callbacks.dispatch(JVMTI_EVENT_AGENT_UNLOAD, _lib.jvmti)
 	return 0
 }
 

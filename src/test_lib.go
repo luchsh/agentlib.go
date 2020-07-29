@@ -10,14 +10,23 @@ import (
 func AgentGoOnLoad(lib *AgentLib) {
 	fmt.Println("GO: AgentGoOnload")
 	fmt.Println("GO: Agent command line options:", lib.options)
-	lib.GetCallbacks().SetVmInitCallback(func(jvmti JvmtiEnv, jni JniEnv, thread uintptr) {
+	lib.GetCallbacks().SetCallback(JVMTI_EVENT_VM_INIT, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		fmt.Println("GO: OnJvmtiVmInit(): triggered on Go level")
 	})
-	lib.GetCallbacks().SetClassLoadCallback(func(jvmti JvmtiEnv, jni JniEnv, thread, clazz uintptr) {
+	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_LOAD, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		fmt.Println("GO: ClassLoad event")
 	})
-	lib.GetCallbacks().SetClassPrepareCallback(func(jvmti JvmtiEnv, jni JniEnv, thread, clazz uintptr) {
+	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_PREPARE, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		fmt.Println("GO: ClassPrepare event")
+	})
+	lib.GetCallbacks().SetCallback(JVMTI_EVENT_AGENT_UNLOAD, func(jvmti JvmtiEnv, args ...JvmtiArg) {
+		fmt.Println("GO: AgentUnloaded")
+	})
+	lib.GetCallbacks().SetCallback(JVMTI_EVENT_METHOD_ENTRY, func(jvmti JvmtiEnv, args ...JvmtiArg) {
+		fmt.Println("GO: method entry")
+	})
+	lib.GetCallbacks().SetCallback(JVMTI_EVENT_METHOD_EXIT, func(jvmti JvmtiEnv, args ...JvmtiArg) {
+		fmt.Println("GO: method exit")
 	})
 }
 

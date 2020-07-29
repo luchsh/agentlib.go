@@ -205,12 +205,12 @@ void EnableJvmtiCallback(void* p, int event_id) {
 
   jvmtiError jvmti_res = (*jvmti)->SetEventCallbacks(jvmti, _callbacks, sizeof(jvmtiEventCallbacks));
   if (jvmti_res != JVMTI_ERROR_NONE) {
-    printf("Failed to set jvmti callbacks\n");
+    printf("Failed to set jvmti callbacks: %s\n", get_jvmti_event_name(event_id));
     return;
   }
   jvmti_res = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE, event_id, NULL);
   if (jvmti_res != JVMTI_ERROR_NONE) {
-    printf("Failed to set jvmti callbacks\n");
+    printf("Failed to set jvmti callback notification mode: %s\n", get_jvmti_event_name(event_id));
     return;
   }
   DEBUG(printf("C: enabled event %s\n", get_jvmti_event_name(event_id)));
