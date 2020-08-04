@@ -142,8 +142,7 @@ func OnJvmtiEvent(eventId int, jvmti, params uintptr, paramsLen int) {
 
 	args := make([]JvmtiArg, paramsLen)
 	for i := 0; i < paramsLen; i++ {
-		a := JvmtiArg(ra.ptrAt(i))
-		args = append(args, a)
+		args[i] = JvmtiArg(ra.ptrAt(i))
 	}
 
 	callbacks.dispatch(eventId, jvmtiEnv, args...)

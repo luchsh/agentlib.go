@@ -26,9 +26,8 @@ const (
 // JniEnv conrresponds to JNIEnv*
 type JniEnv uintptr
 
-
 // GetVersion corresponding to
 // jint GetVersion(JNIEnv *env);
-func (jni *JniEnv) GetVersion() int32 {
+func (jni JniEnv) GetVersion() int32 {
 	return JNI_VERSION_1_2
 }

@@ -14,10 +14,12 @@ func AgentGoOnLoad(lib *AgentLib) {
 		fmt.Println("GO: OnJvmtiVmInit(): triggered on Go level")
 	})
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_LOAD, func(jvmti JvmtiEnv, args ...JvmtiArg) {
-		fmt.Println("GO: ClassLoad event")
+		name := jvmti.GetClassSignature(uintptr(args[2]))
+		fmt.Println("GO: ClassLoad event: ", name)
 	})
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_PREPARE, func(jvmti JvmtiEnv, args ...JvmtiArg) {
-		fmt.Println("GO: ClassPrepare event")
+		name := jvmti.GetClassSignature(uintptr(args[2]))
+		fmt.Println("GO: ClassPrepare event: ", name)
 	})
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_AGENT_UNLOAD, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		fmt.Println("GO: AgentUnloaded")
