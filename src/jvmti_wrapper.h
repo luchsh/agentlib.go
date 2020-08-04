@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 int GetClassSignature(void* jvmti, void* clazz, void* sigptr, void* genptr);
+int Allocate(void* jvmti, long long size, void* ptr);
 int Deallocate(void* jvmti, void* mem);
 
 #ifdef __cplusplus

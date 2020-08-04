@@ -26,24 +26,31 @@ import(
 // JvmtiEnv corresponds to jvmtiEnv*
 type JvmtiEnv uintptr
 
+func (jvmti JvmtiEnv) asPointer() unsafe.Pointer {
+	return unsafe.Pointer(jvmti)
+}
+
 func (jvmti JvmtiEnv) GetClassSignature(clazz uintptr) (res string) {
-	var sigp uintptr
-	var genp uintptr
-	env := uintptr(jvmti)
-	C.GetClassSignature(unsafe.Pointer(env), unsafe.Pointer(clazz), unsafe.Pointer(&sigp), unsafe.Pointer(&genp))
-	if sigp != uintptr(0) {
+	var sigp,genp unsafe.Pointer
+	C.GetClassSignature(jvmti.asPointer(), unsafe.Pointer(clazz), unsafe.Pointer(&sigp), unsafe.Pointer(&genp))
+	if sigp != nil {
 		defer jvmti.Deallocate(sigp)
-		res = C.GoString((*C.char)(unsafe.Pointer(sigp)));
+		res = C.GoString((*C.char)(sigp));
 	}
-	if genp != uintptr(0) {
+	if genp != nil {
 		defer jvmti.Deallocate(genp)
-		tg := C.GoString((*C.char)(unsafe.Pointer(genp)));
+		tg := C.GoString((*C.char)(genp));
 		res = res + "<" + tg + ">"
 	}
 	return res
 }
 
-func (jvmti JvmtiEnv) Deallocate(mem uintptr) int {
+func (jvmti JvmtiEnv) Allocate(sz int64) (res unsafe.Pointer) {
+	C.Allocate(jvmti.asPointer(), C.longlong(sz), unsafe.Pointer(&res))
+	return res
+}
+
+func (jvmti JvmtiEnv) Deallocate(mem unsafe.Pointer) int {
 	env := uintptr(jvmti)
-	return int(C.Deallocate(unsafe.Pointer(env), unsafe.Pointer(mem)))
+	return int(C.Deallocate(unsafe.Pointer(env), mem))
 }

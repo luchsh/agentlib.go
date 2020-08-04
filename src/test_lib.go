@@ -11,7 +11,9 @@ func AgentGoOnLoad(lib *AgentLib) {
 	fmt.Println("GO: AgentGoOnload")
 	fmt.Println("GO: Agent command line options:", lib.options)
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_VM_INIT, func(jvmti JvmtiEnv, args ...JvmtiArg) {
-		fmt.Println("GO: OnJvmtiVmInit(): triggered on Go level")
+		p := jvmti.Allocate(int64(4096))
+		defer jvmti.Deallocate(p)
+		fmt.Println("GO: OnJvmtiVmInit(): triggered on Go level\np=", p)
 	})
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_LOAD, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		name := jvmti.GetClassSignature(uintptr(args[2]))

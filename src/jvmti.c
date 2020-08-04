@@ -8,9 +8,14 @@ int GetClassSignature(void* jvmti, void* clazz, void* sigptr, void* genptr) {
   jclass cls = (jclass)clazz;
   char** sig_ptr = (char**)sigptr;
   char** gen_ptr = (char**)genptr;
-  int ret = (int)(*env)->GetClassSignature(env, cls, sig_ptr, gen_ptr);
-  // printf("%p,%p:-%s-%s\n", env, cls, *sig_ptr, *gen_ptr);
-  return ret;
+  return (int)(*env)->GetClassSignature(env, cls, sig_ptr, gen_ptr);
+}
+
+// jvmtiError Allocate(jvmtiEnv* env, jlong size, unsigned char** mem_ptr)
+int Allocate(void* jvmti, long long size, void* ptr) {
+  jvmtiEnv* env = (jvmtiEnv*)jvmti;
+  jlong jsize = (jlong)size;
+  return (int)(*env)->Allocate(env, jsize, (unsigned char**)ptr);
 }
 
 // jvmtiError Deallocate(jvmtiEnv* env, unsigned char* mem)
