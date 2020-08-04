@@ -51,6 +51,5 @@ func (jvmti JvmtiEnv) Allocate(sz int64) (res unsafe.Pointer) {
 }
 
 func (jvmti JvmtiEnv) Deallocate(mem unsafe.Pointer) int {
-	env := uintptr(jvmti)
-	return int(C.Deallocate(unsafe.Pointer(env), mem))
+	return int(C.Deallocate(jvmti.asPointer(), mem))
 }
