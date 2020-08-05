@@ -1,4 +1,3 @@
-
 //
 // Copyright 2020 chuanshenglu@gmail.com
 //
@@ -27,6 +26,9 @@ extern "C" {
 int GetClassSignature(void* jvmti, void* clazz, void* sigptr, void* genptr);
 int Allocate(void* jvmti, long long size, void* ptr);
 int Deallocate(void* jvmti, void* mem);
+int GetThreadState(void* jvmti, void* thrd, void* state_ptr);
+int GetCurrentThread(void* jvmti, void* thrd_ptr);
+int GetAllThreads(void* jvmti, void* count, void* threads);
 
 #ifdef __cplusplus
 }

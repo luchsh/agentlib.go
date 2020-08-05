@@ -45,6 +45,7 @@ func (jvmti JvmtiEnv) GetClassSignature(clazz uintptr) (res string) {
 	return res
 }
 
+//////////////////////// Memory management ////////////////////
 func (jvmti JvmtiEnv) Allocate(sz int64) (res unsafe.Pointer) {
 	C.Allocate(jvmti.asPointer(), C.longlong(sz), unsafe.Pointer(&res))
 	return res
@@ -52,4 +53,48 @@ func (jvmti JvmtiEnv) Allocate(sz int64) (res unsafe.Pointer) {
 
 func (jvmti JvmtiEnv) Deallocate(mem unsafe.Pointer) int {
 	return int(C.Deallocate(jvmti.asPointer(), mem))
+}
+
+//////////////////////// Thread ////////////////////
+const(
+	JVMTI_THREAD_STATE_ALIVE=0x0001
+	JVMTI_THREAD_STATE_TERMINATED=0x0002
+	JVMTI_THREAD_STATE_RUNNABLE=0x0004
+	JVMTI_THREAD_STATE_BLOCKED_ON_MONITOR_ENTER=0x0400
+	JVMTI_THREAD_STATE_WAITING=0x0080
+	JVMTI_THREAD_STATE_WAITING_INDEFINITELY=0x0010
+	JVMTI_THREAD_STATE_WAITING_WITH_TIMEOUT=0x0020
+	JVMTI_THREAD_STATE_SLEEPING=0x0040
+	JVMTI_THREAD_STATE_IN_OBJECT_WAIT=0x0100
+	JVMTI_THREAD_STATE_PARKED=0x0200
+	JVMTI_THREAD_STATE_SUSPENDED=0x100000
+	JVMTI_THREAD_STATE_INTERRUPTED=0x200000
+	JVMTI_THREAD_STATE_IN_NATIVE=0x400000
+	JVMTI_THREAD_STATE_VENDOR_1=0x10000000
+	JVMTI_THREAD_STATE_VENDOR_2=0x20000000
+	JVMTI_THREAD_STATE_VENDOR_3=0x40000000
+)
+
+func (jvmti JvmtiEnv) GetThreadState(thrd uintptr) (stat int) {
+	C.GetThreadState(jvmti.asPointer(), unsafe.Pointer(thrd), unsafe.Pointer(&stat))
+	return stat
+}
+
+func (jvmti JvmtiEnv) GetCurrentThread() (thrd uintptr) {
+	C.GetCurrentThread(jvmti.asPointer(), unsafe.Pointer(&thrd))
+	return thrd
+}
+
+func (jvmti JvmtiEnv) GetAllThreads() (threads []uintptr) {
+	var count int
+	var p unsafe.Pointer
+	C.GetAllThreads(jvmti.asPointer(), unsafe.Pointer(&count), unsafe.Pointer(&p))
+	defer jvmti.Deallocate(p)
+	if count > 0 {
+		threads = make([]uintptr, count)
+		for i := 0; i < count; i++ {
+			threads[i] = *(*uintptr)(unsafe.Pointer((uintptr(p)+uintptr(i*8))))
+		}
+	}
+	return threads
 }

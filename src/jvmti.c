@@ -39,3 +39,19 @@ int Deallocate(void* jvmti, void* mem) {
   unsigned char* p = (unsigned char*)mem;
   return(int)(*env)->Deallocate(env, p);
 }
+
+// jvmtiError GetThreadState(jvmtiEnv* env, jthread thread, jint* thread_state_ptr)
+int GetThreadState(void* jvmti, void* thrd, void* state_ptr) {
+  jvmtiEnv* env = (jvmtiEnv*)jvmti;
+  return (int)(*env)->GetThreadState(env, (jthread)thrd, (jint*)state_ptr);
+}
+
+int GetCurrentThread(void* jvmti, void* thrd_ptr) {
+  jvmtiEnv* env = (jvmtiEnv*)jvmti;
+  return (int)(*env)->GetCurrentThread(env, (jthread*)thrd_ptr);
+}
+
+int GetAllThreads(void* jvmti, void* count, void* threads) {
+  jvmtiEnv* env = (jvmtiEnv*)jvmti;
+  return (int)(*env)->GetAllThreads(env, (jint*)count, (jthread**)threads);
+}
