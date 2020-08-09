@@ -58,7 +58,7 @@ type jvmtih struct {
 	// APIs provided by jvmtiEnv
 	apis []*method
 	// callbacks provided via jvmtiEventCallbacks
-	cbs  []string
+	cbs []*method
 }
 
 func main() {
@@ -277,6 +277,7 @@ func (j *jvmtih) genJvmtiGoWrapper(gn string) {
 }
 
 // parse jvmti.h to collect required information
+// naive pattern matching based quick & dirty impl, fix later.
 func parseJvmtiH(f *os.File) (j *jvmtih) {
 	j = new(jvmtih)
 	j.cons = make(map[string]string)
@@ -328,8 +329,11 @@ func parseJvmtiH(f *os.File) (j *jvmtih) {
 			j.cons[ar[0]] = ar[1]
 		} else if s.HasPrefix(ln, "typedef") && s.Contains(ln, "*jvmtiEvent") {
 			// jvmti event handler prototype
-			ln = readToEnd(ln, ";", rd)
-			j.cbs = append(j.cbs, ln)
+			ln = s.TrimSpace(readToEnd(ln, ";", rd))
+			ln = ln[s.Index(ln, " ")+1:]
+			ln = s.TrimSpace(ln)
+			m := parseJvmtiApiDecl(ln)
+			j.cbs = append(j.cbs, m)
 		} else if s.HasPrefix(ln, "jvmtiError (JNICALL") && s.Contains(ln, "jvmtiEnv* env") {
 			// jvmti apis
 			ln = readToEnd(ln, ";", rd)
@@ -347,7 +351,7 @@ func parseJvmtiH(f *os.File) (j *jvmtih) {
 func parseJvmtiApiDecl(ln string) (m *method) {
 	dbg_log("passing method:", ln)
 	m = new(method)
-	pat := "(\\w+)\\s+\\(JNICALL\\s+\\*(\\S+)\\)\\s+\\((.*)\\);"
+	pat := "(\\w+)\\s+\\(JNICALL\\s+\\*(\\S+)\\)\\s*\\((.*)\\);"
 	cp, _ := regexp.Compile(pat)
 	ln = s.TrimSpace(ln)
 	sn := cp.FindStringSubmatch(ln)
@@ -364,6 +368,8 @@ func parseJvmtiApiDecl(ln string) (m *method) {
 				m.pname = append(m.pname, s.TrimSpace(p[li+1:]))
 			} else if p == "..." {
 				m.varg = true
+			} else if p == "void" {
+				// ignore
 			} else {
 				fmt.Println("Cannot parse arg:", p)
 				panic(p)
