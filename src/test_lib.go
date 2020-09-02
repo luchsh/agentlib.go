@@ -18,9 +18,14 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"sync/atomic"
 )
 
 // This file contains the code that user has to write
+var classesLoaded int64
 
 // AgentGoOnLoad is the mandatory global hook provided by user code
 func AgentGoOnLoad(lib *AgentLib) {
@@ -34,6 +39,7 @@ func AgentGoOnLoad(lib *AgentLib) {
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_LOAD, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		name := jvmti.GetClassSignature(uintptr(args[2]))
 		fmt.Println("GO: ClassLoad event: ", name)
+		atomic.AddInt64(&classesLoaded, int64(1))
 	})
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_PREPARE, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		name := jvmti.GetClassSignature(uintptr(args[2]))
@@ -48,6 +54,14 @@ func AgentGoOnLoad(lib *AgentLib) {
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_METHOD_EXIT, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		fmt.Println("GO: method exit")
 	})
+
+	go func() {
+		http.HandleFunc("/classesLoaded", func(w http.ResponseWriter, _ *http.Request) {
+			io.WriteString(w, fmt.Sprintf("Total classes loaded: %d\n", classesLoaded))
+		})
+		println("Server loaded...")
+		log.Fatal(http.ListenAndServe("0.0.0.0:8080", nil))
+	}()
 }
 
 func AgentGoOnUnload() {
