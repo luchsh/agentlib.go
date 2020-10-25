@@ -73,5 +73,7 @@ echo "Using JAVA_HOME=${JAVA_HOME}"
   if [[ $? -eq 0 ]]; then
     echo "Build successful"
     exit 0
+  else
+    exit 128
   fi
 )

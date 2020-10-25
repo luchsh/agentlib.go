@@ -234,6 +234,16 @@ void EnableJvmtiCallback(void* p, int event_id) {
   }
 }
 
+//export OnAgentLoad
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern void OnAgentLoad(uintptr_t, uintptr_t, const char*);
+extern void OnAgentUnload();
+#ifdef __cplusplus
+}
+#endif
+
 // JVMTI start-up point
 jint Agent_OnLoad(JavaVM* javaVM, char* options, void* reserved) {
   DEBUG(printf("agent.go loaded\n"));

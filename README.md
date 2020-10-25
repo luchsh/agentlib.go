@@ -17,12 +17,12 @@ bash -x build.sh
 ```
 > For now, only Linux and Mac OSX are supported.
 
+# Test
 Please try following command to test
 ```
-java -agentlib:jnigo=hello_options -version
+cd test
+go test -v
 ```
-
-`test_lib.go` is the place where you can add more features to the agent.
 
 # Known issues
 Current codebase is just a skeleton which seems to be capable of running some demos.
