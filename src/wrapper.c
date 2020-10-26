@@ -157,7 +157,7 @@ static size_t nof_args_for_event[] = {
     if (EVENT == JVMTI_EVENT_VM_INIT) {                                   \
       __internalOnVMInit(jvmti, (JNIEnv*)(args[0]), (jthread)(args[1]));  \
     }                                                                     \
-    OnJvmtiEvent(EVENT, jvmti, args, ARRAY_LEN(args));                    \
+    OnJvmtiEvent(EVENT, (uintptr_t)jvmti, (uintptr_t)args, ARRAY_LEN(args)); \
   }
 
 // Generate event handler methods
