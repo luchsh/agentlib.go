@@ -21,11 +21,13 @@
 // WARNING: variadic args not supported for now, bite me!
 //int SetEventNotificationMode(void* env, int mode, int event_type, void* event_thread, ...)
 
+#if JVMTI_VERSION >= 0x30090000
 // jvmtiError (JNICALL *GetAllModules) (jvmtiEnv* env,jint* module_count_ptr,jobject** modules_ptr);
 int GetAllModules(void* env, void* module_count_ptr, void* modules_ptr) {
   jvmtiEnv* jvmti = (jvmtiEnv*)env;
   return (int)(*jvmti)->GetAllModules(env,(jint*)module_count_ptr,(jobject**)modules_ptr);
 }
+#endif
 
 // jvmtiError (JNICALL *GetAllThreads) (jvmtiEnv* env,jint* threads_count_ptr,jthread** threads_ptr);
 int GetAllThreads(void* env, void* threads_count_ptr, void* threads_ptr) {
@@ -243,11 +245,13 @@ int ClearBreakpoint(void* env, void* method, void* location) {
   return (int)(*jvmti)->ClearBreakpoint(env,(jmethodID)method,(jlocation)location);
 }
 
+#if JVMTI_VERSION >= 0x30090000
 // jvmtiError (JNICALL *GetNamedModule) (jvmtiEnv* env,jobject class_loader,const char* package_name,jobject* module_ptr);
 int GetNamedModule(void* env, void* class_loader, void* package_name, void* module_ptr) {
   jvmtiEnv* jvmti = (jvmtiEnv*)env;
   return (int)(*jvmti)->GetNamedModule(env,(jobject)class_loader,(const char*)package_name,(jobject*)module_ptr);
 }
+#endif
 
 // jvmtiError (JNICALL *SetFieldAccessWatch) (jvmtiEnv* env,jclass klass,jfieldID field);
 int SetFieldAccessWatch(void* env, void* klass, void* field) {
@@ -561,6 +565,7 @@ int ResumeThreadList(void* env, int request_count, void* request_list, void* res
   return (int)(*jvmti)->ResumeThreadList(env,(jint)request_count,(const jthread*)request_list,(jvmtiError*)results);
 }
 
+#if JVMTI_VERSION >= 0x30090000
 // jvmtiError (JNICALL *AddModuleReads) (jvmtiEnv* env,jobject module,jobject to_module);
 int AddModuleReads(void* env, void* module, void* to_module) {
   jvmtiEnv* jvmti = (jvmtiEnv*)env;
@@ -596,6 +601,7 @@ int IsModifiableModule(void* env, void* module, void* is_modifiable_module_ptr) 
   jvmtiEnv* jvmti = (jvmtiEnv*)env;
   return (int)(*jvmti)->IsModifiableModule(env,(jobject)module,(jboolean*)is_modifiable_module_ptr);
 }
+#endif // #if JVMTI_VERSION >= 0x30090000
 
 // jvmtiError (JNICALL *GetAllStackTraces) (jvmtiEnv* env,jint max_frame_count,jvmtiStackInfo** stack_info_ptr,jint* thread_count_ptr);
 int GetAllStackTraces(void* env, int max_frame_count, void* stack_info_ptr, void* thread_count_ptr) {
@@ -897,9 +903,10 @@ int GetLocalInstance(void* env, void* thread, int depth, void* value_ptr) {
   return (int)(*jvmti)->GetLocalInstance(env,(jthread)thread,(jint)depth,(jobject*)value_ptr);
 }
 
+#if JVMTI_VERSION >= 0x300B0000
 // jvmtiError (JNICALL *SetHeapSamplingInterval) (jvmtiEnv* env,jint sampling_interval);
 int SetHeapSamplingInterval(void* env, int sampling_interval) {
   jvmtiEnv* jvmti = (jvmtiEnv*)env;
   return (int)(*jvmti)->SetHeapSamplingInterval(env,(jint)sampling_interval);
 }
-
+#endif

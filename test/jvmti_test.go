@@ -37,9 +37,9 @@ var (
 func TestBasic(t *testing.T) {
 	dir,err := ioutil.TempDir(os.TempDir(), "_jvmti_test")
 	if err != nil {
-		t.Fatalf("Failed to create temp directory")
+		t.Fatalf("Failed to create temp directory\n")
 	} else {
-		t.Logf("temp directory created: %s", dir)
+		t.Logf("temp directory created: %s\n", dir)
 	}
 	defer os.RemoveAll(dir)
 
@@ -59,7 +59,22 @@ func TestBasic(t *testing.T) {
 	if out,err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Failed to run java with agent\n%s\n",string(out))
 	} else {
-		t.Logf("passed:\n%s\n", string(out))
+		strout := string(out)
+		expectedSubStrs := []string {
+			"GO: AgentGoOnload",
+			"GO: ClassLoad",
+			"GO: Agent command line options: hello_options",
+			"GO: OnJvmtiVmInit(): triggered on Go level",
+			"agent.go loaded",
+			"C: enabled event id=50, name=JVMTI_EVENT_VM_INIT",
+			"GO: ClassPrepare event:  ",
+		}
+		t.Logf("Output:\n%s\n", string(out))
+		for _,s := range expectedSubStrs {
+			if !strings.Contains(strout, s) {
+				t.Fatalf("Cannot find string:\n%s\n", s)
+			}
+		}
 	}
 }
 

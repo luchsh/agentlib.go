@@ -67,7 +67,7 @@ echo "Using JAVA_HOME=${JAVA_HOME}"
   esac
 
   cd src
-  go build -v -x -work -buildmode=c-shared -o libjnigo.${DL_POSTFIX}
+  go build -v -buildmode=c-shared -o libjnigo.${DL_POSTFIX}
 
 
   if [[ $? -eq 0 ]]; then

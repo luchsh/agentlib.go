@@ -34,11 +34,11 @@ func AgentGoOnLoad(lib *AgentLib) {
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_VM_INIT, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		p := jvmti.Allocate(int64(4096))
 		defer jvmti.Deallocate(p)
-		fmt.Println("GO: OnJvmtiVmInit(): triggered on Go level\np=", p)
+		fmt.Printf("GO: OnJvmtiVmInit(): triggered on Go level\np=%v\n", p)
 	})
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_LOAD, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		name := jvmti.GetClassSignature(uintptr(args[2]))
-		fmt.Println("GO: ClassLoad event: ", name)
+		fmt.Printf("GO: ClassLoad [%d] event: %s\n", classesLoaded, name)
 		atomic.AddInt64(&classesLoaded, int64(1))
 	})
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_PREPARE, func(jvmti JvmtiEnv, args ...JvmtiArg) {
