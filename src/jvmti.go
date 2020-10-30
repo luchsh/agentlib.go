@@ -17,6 +17,7 @@ package main
 
 // #include "wrapper.h"
 // #include "jvmti_wrapper.h"
+// #include <jvmti.h>
 import "C"
 
 import(
@@ -69,7 +70,8 @@ func (jvmti JvmtiEnv) GetCurrentThread() (thrd uintptr) {
 func (jvmti JvmtiEnv) GetAllThreads() (threads []uintptr) {
 	var count int
 	var p unsafe.Pointer
-	C.GetAllThreads(jvmti.asPointer(), unsafe.Pointer(&count), unsafe.Pointer(&p))
+	ret := C.GetAllThreads(jvmti.asPointer(), unsafe.Pointer(&count), unsafe.Pointer(&p))
+	println("allThreadsP=", p, ",ret=", ret)
 	defer jvmti.Deallocate(p)
 	if count > 0 {
 		threads = make([]uintptr, count)
@@ -78,4 +80,27 @@ func (jvmti JvmtiEnv) GetAllThreads() (threads []uintptr) {
 		}
 	}
 	return threads
+}
+
+type ThreadInfo struct {
+	Name string
+	Priority int
+	IsDaemon bool
+	ThreadGroup uintptr
+	ContextClassLoader uintptr
+};
+
+func (jvmti JvmtiEnv) GetThreadInfo(thrd uintptr) (info *ThreadInfo) {
+	p := jvmti.Allocate(C.sizeof_struct__jvmtiThreadInfo)
+	defer jvmti.Deallocate(p)
+	C.GetThreadInfo(jvmti.asPointer(), unsafe.Pointer(thrd), p)
+	ps := (*C.struct__jvmtiThreadInfo)(p)
+	info = &ThreadInfo {
+		Name: C.GoString(ps.name),
+		Priority: int(ps.priority),
+		IsDaemon: (ps.is_daemon != 0),
+		ThreadGroup: uintptr(ps.thread_group),
+		ContextClassLoader: uintptr(ps.context_class_loader),
+	}
+	return info
 }

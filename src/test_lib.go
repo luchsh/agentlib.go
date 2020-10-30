@@ -22,6 +22,7 @@ import (
 	"log"
 	"net/http"
 	"sync/atomic"
+	"time"
 )
 
 // This file contains the code that user has to write
@@ -35,6 +36,10 @@ func AgentGoOnLoad(lib *AgentLib) {
 		p := jvmti.Allocate(int64(4096))
 		defer jvmti.Deallocate(p)
 		fmt.Printf("GO: OnJvmtiVmInit(): triggered on Go level\np=%v\n", p)
+
+		ch := make(chan bool)
+		TestMain(lib.jvmti, ch)
+		//<-ch
 	})
 	lib.GetCallbacks().SetCallback(JVMTI_EVENT_CLASS_LOAD, func(jvmti JvmtiEnv, args ...JvmtiArg) {
 		name := jvmti.GetClassSignature(uintptr(args[2]))
@@ -66,6 +71,23 @@ func AgentGoOnLoad(lib *AgentLib) {
 
 func AgentGoOnUnload() {
 	fmt.Println("GO: AgentGoOnUnload")
+}
+
+func testThreads(jvmti JvmtiEnv) {
+	allThreads := jvmti.GetAllThreads()
+	if len(allThreads) <= 0 {
+		panic("Failed to get all threads")
+	}
+	for _,t := range allThreads {
+		info := jvmti.GetThreadInfo(t)
+		fmt.Printf("Thread %v %v\n", t, info)
+	}
+}
+
+func TestMain(jvmti JvmtiEnv, ch chan bool) {
+	time.Sleep(5 * time.Second)
+	testThreads(jvmti)
+	//ch <- true
 }
 
 func main() {}
