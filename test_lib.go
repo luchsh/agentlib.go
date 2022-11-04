@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+// +build ignore
+
 package main
 
 import (
@@ -89,5 +91,3 @@ func TestMain(jvmti JvmtiEnv, ch chan bool) {
 	testThreads(jvmti)
 	//ch <- true
 }
-
-func main() {}

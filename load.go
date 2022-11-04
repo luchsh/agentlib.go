@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-package main
+package jpprof
 
 //#include "wrapper.h"
 import "C"
@@ -45,7 +45,7 @@ func OnAgentLoad(javaVM, jvmti uintptr, options *C.char) {
 	_lib.options = C.GoString(options)
 	_lib.jvmti = JvmtiEnv(jvmti)
 	_lib.callbacks.init()
-	AgentGoOnLoad(_lib)
+	//AgentGoOnLoad(_lib)
 }
 
 //export OnAgentUnload

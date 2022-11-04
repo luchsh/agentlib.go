@@ -13,14 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-package main
+package jpprof
 
 // #include "wrapper.h"
 // #include "jvmti_wrapper.h"
 // #include <jvmti.h>
 import "C"
 
-import(
+import (
 	"unsafe"
 )
 

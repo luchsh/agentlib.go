@@ -13,21 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
+// generate wrappers from jni headers
+
+//+build ignore
+
 package main
 
-// #include "wrapper.h"
-import "C"
-
-const (
-	JNI_VERSION_1_1 = 0x00010001
-	JNI_VERSION_1_2 = 0x00010002
+import (
+	"fmt"
+	"os"
 )
 
-// JniEnv conrresponds to JNIEnv*
-type JniEnv uintptr
+var javaHome string
+//var javaVersion []int // 14.0.1
 
-// GetVersion corresponding to
-// jint GetVersion(JNIEnv *env);
-func (jni JniEnv) GetVersion() int32 {
-	return JNI_VERSION_1_2
+func init() {
+	if javaHome = os.Getenv("JAVA_HOME"); javaHome == "" {
+		panic("Cannot find a valid JAVA_HOME")
+	}
+	if fi,e := os.Lstat(javaHome); e == nil {
+		if !fi.IsDir() {
+			panic(fmt.Errorf("JAVA_HOME=%s is not a directory", javaHome))
+		}
+	} else {
+		panic(e)
+	}
+}
+
+func main() {
 }

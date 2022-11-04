@@ -14,15 +14,15 @@
 // limitations under the License.
 //
 
-package main_test
+package jpprof_test
 
-import(
+import (
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 	"strconv"
+	"strings"
 	"testing"
 )
 
