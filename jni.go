@@ -20,6 +20,7 @@ package jpprof
 import "C"
 
 import (
+	"strings"
 	"unsafe"
 
 	"github.com/ClarkGuan/jni"
@@ -35,8 +36,13 @@ func JniGetCreatedJavaVMs() (vms []jni.VM) {
 	l := 128
 	buf := C.malloc(C.size_t(l * ptrSize))
 	defer C.free(buf)
-	if 0 == C.JNI_GetCreatedJavaVMs(buf, l, nil) {
-		for p := uintptr(buf); p < uintptr(buf)+128*ptrSize; p+= ptrSize {
+	var n_vm C.jsize
+	if 0 == C.JNI_GetCreatedJavaVMs((**C.JavaVM)(buf), C.jsize(l), &n_vm) {
+		if int(n_vm) > l {
+			panic("insufficient buffer space")
+		}
+		for i := 0; i < int(n_vm); i++ {
+			p := uintptr(buf) + uintptr(i) * ptrSize
 			addr := *(*uintptr)(unsafe.Pointer(p))
 			vms = append(vms, jni.VM(addr))
 		}
@@ -45,26 +51,34 @@ func JniGetCreatedJavaVMs() (vms []jni.VM) {
 }
 
 // Create a Java VM
-func JniCreateJavaVM(env []string, args string) jni.VM {
-	var vmp uintptr
-	var envp uintptr
+func JniCreateJavaVM(args string) (jni.VM, JniEnv) {
+	var vmp jni.VM
+	var envp JniEnv
 
-	if len(env) > 0 {
-		buf := C.malloc(len(env)*ptrSize)
-		defer C.free(buf)
-		for i,e := range env {
-			ce := C.CString(e)
-			defer C.free(ce)
-			slotAddr := uintptr(buf)+uintptr(i)*ptrSize
-			*(**C.char)(unsafe.Pointer(slotAddr)) = ce
+	var vmargs unsafe.Pointer
+	jva := (*C.JavaVMInitArgs)(C.malloc(C.sizeof_JavaVMInitArgs))
+	defer C.free(unsafe.Pointer(jva))
+	jva.version = jni.JNI_VERSION_1_6
+	jva.nOptions = 0
+	if len(args) > 0 {
+		fds := strings.Fields(args)
+		jva.nOptions = C.jint(len(fds))
+		opts := C.malloc(C.size_t(C.sizeof_JavaVMOption * len(fds)))
+		defer C.free(opts)
+		for i,a := range fds {
+			println(a)
+			o := (*C.JavaVMOption)(unsafe.Pointer(uintptr(opts)+uintptr(i)*C.sizeof_JavaVMOption))
+			ca := C.CString(a)
+			defer C.free(unsafe.Pointer(ca))
+			o.optionString = ca
 		}
+		jva.options = (*C.JavaVMOption)(opts)
 	}
+	vmargs = unsafe.Pointer(jva)
 
-	cargs := C.CString(args)
-	defer C.free(cargs)
-	C.JNI_CreateJavaVM(unsafe.Pointer(&vmp),  unsafe.Pointer(envp), unsafe.Pointer(cargs))
+	C.JNI_CreateJavaVM((**C.JavaVM)(unsafe.Pointer(&vmp)), (*unsafe.Pointer)(unsafe.Pointer(&envp)), vmargs)
 
-	return jni.VM(vmp)
+	return vmp, envp
 }
 
 // Retrieve current virtual machine of this process if exists
