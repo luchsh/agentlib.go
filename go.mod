@@ -1,4 +1,4 @@
-module github.com/luchsh/jpprof
+module github.com/luchsh/agentlib.go
 
 go 1.18
 

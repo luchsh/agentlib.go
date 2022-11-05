@@ -2,8 +2,22 @@
 #
 # source env.sh before running tests or compilation
 
+OS=`uname -s | tr '[[:upper:]]' '[[:lower:]]'`
+
+function detect_java_home {
+  # Use a Java snippet to detect
+  cat > /tmp/EchoJavaHome.java <<EOF
+public class EchoJavaHome {
+  public static void main(String[] args) {
+    System.out.println(System.getProperty("java.home"));
+  }
+}
+EOF
+  javac /tmp/EchoJavaHome.java
+  export JAVA_HOME="$(java -cp /tmp EchoJavaHome)"
+}
+
 function setup {
-  OS=`uname -s | tr '[[:upper:]]' '[[:lower:]]'`
   if [[ "x${OS}" = "xdarwin" ]]; then
     export DYLD_LIBRARY_PATH=${JAVA_HOME}/lib/server:${DYLD_LIBRARY_PATH}
   elif [[ "x${OS}" = "xlinux" ]]; then
@@ -17,16 +31,7 @@ function setup {
     export LD_LIBRARY_PATH=${JAVA_HOME}/lib/server:${DYLD_LIBRARY_PATH}
   fi
 
-  # Use a Java snippet to detect
-  cat > /tmp/EchoJavaHome.java <<EOF
-public class EchoJavaHome {
-  public static void main(String[] args) {
-    System.out.println(System.getProperty("java.home"));
-  }
-}
-EOF
-  javac /tmp/EchoJavaHome.java
-  export JAVA_HOME="$(java -cp /tmp EchoJavaHome)"
+  detect_java_home
 
   if [[ "x${JAVA_HOME}" = "x" ]] || [[ ! -d "${JAVA_HOME}" ]]; then
     echo "Canot find a valid JAVA_HOME, aborting..."
