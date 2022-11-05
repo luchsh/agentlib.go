@@ -7,21 +7,16 @@ import (
 )
 
 func TestGetCreatedJavaVMs(t *testing.T) {
-	vms := JniGetCreatedJavaVMs()
-	assert.Equal(t, len(vms), 0)
 }
 
 func TestCreateJavaVM(t *testing.T) {
 	vm,jni := JniCreateJavaVM("")
-	assert.NotEqual(t, int(vm), 0)
-	assert.NotEqual(t, int(jni), 0)
-	vm.DestroyJavaVM()
+	assert.NotEqual(t, uintptr(vm), 0)
+	assert.NotEqual(t, uintptr(jni), 0)
 
-	vm,jni = JniCreateJavaVM("-verbose:gc")
-	println(vm)
-	assert.NotEqual(t, int(vm), 0)
-	assert.NotEqual(t, int(jni), 0)
-	vm.DestroyJavaVM()
+	vm,jni = JniCreateJavaVM("-verbose:gc -Djava.class.path=testdata Loop")
+	assert.NotEqual(t, uintptr(vm), 0)
+	assert.NotEqual(t, uintptr(jni), 0)
 }
 
 

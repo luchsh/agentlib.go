@@ -31,6 +31,10 @@
 #ifndef __WRAPPER_H__
 #define __WRAPPER_H__
 
+#ifdef __linux__
+#include <stdint.h>
+#endif
+
 #include <jni.h>
 #include <jvmti.h>
 

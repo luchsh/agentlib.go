@@ -36,13 +36,8 @@ func JniGetCreatedJavaVMs() (vms []jni.VM) {
 	l := 128
 	buf := C.malloc(C.size_t(l * ptrSize))
 	defer C.free(buf)
-	var n_vm C.jsize
-	if 0 == C.JNI_GetCreatedJavaVMs((**C.JavaVM)(buf), C.jsize(l), &n_vm) {
-		if int(n_vm) > l {
-			panic("insufficient buffer space")
-		}
-		for i := 0; i < int(n_vm); i++ {
-			p := uintptr(buf) + uintptr(i) * ptrSize
+	if 0 == C.JNI_GetCreatedJavaVMs((**C.JavaVM)(buf), C.jsize(l), nil) {
+		for p := uintptr(buf); p < uintptr(buf)+128*ptrSize; p+= ptrSize {
 			addr := *(*uintptr)(unsafe.Pointer(p))
 			vms = append(vms, jni.VM(addr))
 		}
@@ -56,8 +51,7 @@ func JniCreateJavaVM(args string) (jni.VM, JniEnv) {
 	var envp JniEnv
 
 	var vmargs unsafe.Pointer
-	jva := (*C.JavaVMInitArgs)(C.malloc(C.sizeof_JavaVMInitArgs))
-	defer C.free(unsafe.Pointer(jva))
+	jva := &C.JavaVMInitArgs{ }
 	jva.version = jni.JNI_VERSION_1_6
 	jva.nOptions = 0
 	if len(args) > 0 {
@@ -66,11 +60,8 @@ func JniCreateJavaVM(args string) (jni.VM, JniEnv) {
 		opts := C.malloc(C.size_t(C.sizeof_JavaVMOption * len(fds)))
 		defer C.free(opts)
 		for i,a := range fds {
-			println(a)
 			o := (*C.JavaVMOption)(unsafe.Pointer(uintptr(opts)+uintptr(i)*C.sizeof_JavaVMOption))
-			ca := C.CString(a)
-			defer C.free(unsafe.Pointer(ca))
-			o.optionString = ca
+			o.optionString = C.CString(a)
 		}
 		jva.options = (*C.JavaVMOption)(opts)
 	}
