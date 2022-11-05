@@ -1,22 +1,31 @@
 package jpprof
 
 import (
+	"runtime"
 	"testing"
 
+	"github.com/ClarkGuan/jni"
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	vm jni.VM
+	env JniEnv // only for the creating thread
+)
+
+//  only create the VM once, spec does not support creating multiple VMs
+func init() {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	vm,env = JniCreateJavaVM("-verbose:gc -check:jni -Djava.class.path=./testdata")
+}
+
 func TestGetCreatedJavaVMs(t *testing.T) {
+	vms := JniGetCreatedJavaVMs()
+	assert.Equal(t, len(vms), 1)
 }
 
 func TestCreateJavaVM(t *testing.T) {
-	vm,jni := JniCreateJavaVM("")
-	assert.NotEqual(t, uintptr(vm), 0)
-	assert.NotEqual(t, uintptr(jni), 0)
-
-	vm,jni = JniCreateJavaVM("-verbose:gc -Djava.class.path=testdata Loop")
-	assert.NotEqual(t, uintptr(vm), 0)
-	assert.NotEqual(t, uintptr(jni), 0)
+	assert.NotEqual(t, int(vm), 0)
+	assert.NotEqual(t, int(env), 0)
 }
-
-

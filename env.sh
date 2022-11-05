@@ -31,9 +31,14 @@ if [[ "x${JAVA_HOME}" = "x" ]] || [[ ! -d "${JAVA_HOME}" ]]; then
   exit 128
 fi
 
-export PATH=${JAVA_HOME}/bin:${PATH}
+if [[ "x$(echo ${PATH} | sed 's/:/\n/g' | grep ${JAVA_HOME}/bin)" = "x" ]]; then
+  export PATH=${JAVA_HOME}/bin:${PATH}
+  if [[ -d "${JAVA_HOME}/jre" ]]; then
+    export PATH=${JAVA_HOME}/jre/bin:${PATH}
+  fi
+fi
+
 if [[ -d "${JAVA_HOME}/jre" ]]; then
-  export PATH=${JAVA_HOME}/jre/bin:${PATH}
   export CGO_LDFLAGS="-L${JAVA_HOME}/lib/amd64/server -ljvm"
 else
   export CGO_LDFLAGS="-L${JAVA_HOME}/lib/server -ljvm"
