@@ -21,7 +21,7 @@ import "C"
 // AgentLib defines the information of a agent library
 type AgentLib struct {
 	// The unique instance of JavaVM
-	javaVM uintptr
+	javaVM JVM
 	// command line options to this agent
 	options string
 	// current jvmti env
@@ -36,25 +36,37 @@ func (agent *AgentLib) GetCallbacks() *JvmtiCallbacks {
 }
 
 // The global instance of this agent lib
-var _lib *AgentLib
+var (
+	_lib *AgentLib
+	Onload AgentOnLoadCallback
+	Onunload AgentOnUnloadCallback
+)
+
+type AgentOnLoadCallback func(*AgentLib)
+type AgentOnUnloadCallback func()
 
 //export OnAgentLoad
 func OnAgentLoad(javaVM, jvmti uintptr, options *C.char) {
 	_lib = new(AgentLib)
-	_lib.javaVM = javaVM
+	_lib.javaVM = JVM(javaVM)
 	_lib.options = C.GoString(options)
 	_lib.jvmti = JvmtiEnv(jvmti)
 	_lib.callbacks.init()
-	//AgentGoOnLoad(_lib)
+
+	if Onload != nil {
+		Onload(_lib)
+	}
 }
 
 //export OnAgentUnload
 func OnAgentUnload() int32 {
-	_lib.callbacks.dispatch(JVMTI_EVENT_AGENT_UNLOAD, _lib.jvmti)
+	if Onunload != nil {
+		Onunload()
+	}
 	return 0
 }
 
 //export MainForwardLoop
 func MainForwardLoop() {
-	// TODO: cross-runtime forwarding mechanism
+       // TODO: cross-runtime forwarding mechanism
 }
