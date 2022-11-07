@@ -45,22 +45,29 @@ static jvmtiError GetAllThreads (jvmtiEnv* env, jint* threads_count_ptr, jthread
 }
 
 //  /*   5 : Suspend Thread */
-//  jvmtiError (JNICALL *SuspendThread) (jvmtiEnv* env,
-//    jthread thread);
-//
+//  jvmtiError (JNICALL *SuspendThread) (jvmtiEnv* env, jthread thread);
+static jvmtiError SuspendThread(jvmtiEnv* env, jthread thread) {
+  return (*env)->SuspendThread(env, thread);
+}
+
 //  /*   6 : Resume Thread */
-//  jvmtiError (JNICALL *ResumeThread) (jvmtiEnv* env,
-//    jthread thread);
-//
+//  jvmtiError (JNICALL *ResumeThread) (jvmtiEnv* env, jthread thread);
+static jvmtiError ResumeThread(jvmtiEnv* env, jthread thread) {
+  return (*env)->ResumeThread(env, thread);
+}
+
 //  /*   7 : Stop Thread */
-//  jvmtiError (JNICALL *StopThread) (jvmtiEnv* env,
-//    jthread thread,
-//    jobject exception);
-//
+//  jvmtiError (JNICALL *StopThread) (jvmtiEnv* env, jthread thread, jobject exception);
+static jvmtiError StopThread(jvmtiEnv* env, jthread thread, jobject exception) {
+  return (*env)->StopThread(env, thread, exception);
+}
+
 //  /*   8 : Interrupt Thread */
-//  jvmtiError (JNICALL *InterruptThread) (jvmtiEnv* env,
-//    jthread thread);
-//
+//  jvmtiError (JNICALL *InterruptThread) (jvmtiEnv* env, jthread thread);
+static jvmtiError InterruptThread(jvmtiEnv* env, jthread thread) {
+  return (*env)->InterruptThread(env, thread);
+}
+
 //  /*   9 : Get Thread Info */
 //  jvmtiError (JNICALL *GetThreadInfo) (jvmtiEnv* env, jthread thread, jvmtiThreadInfo* info_ptr);
 static jvmtiError GetThreadInfo(jvmtiEnv* env, jthread thread, jvmtiThreadInfo* info_ptr) {
@@ -68,46 +75,47 @@ static jvmtiError GetThreadInfo(jvmtiEnv* env, jthread thread, jvmtiThreadInfo* 
 }
 
 //  /*   10 : Get Owned Monitor Info */
-//  jvmtiError (JNICALL *GetOwnedMonitorInfo) (jvmtiEnv* env,
-//    jthread thread,
-//    jint* owned_monitor_count_ptr,
-//    jobject** owned_monitors_ptr);
-//
+//  jvmtiError (JNICALL *GetOwnedMonitorInfo) (jvmtiEnv* env, jthread thread, jint* owned_monitor_count_ptr, jobject** owned_monitors_ptr);
+static jvmtiError GetOwnedMonitorInfo(jvmtiEnv* env, jthread thread, jint* owned_monitor_count_ptr, jobject** owned_monitors_ptr) {
+  return (*env)->GetOwnedMonitorInfo(env, thread, owned_monitor_count_ptr, owned_monitors_ptr);
+}
+
 //  /*   11 : Get Current Contended Monitor */
-//  jvmtiError (JNICALL *GetCurrentContendedMonitor) (jvmtiEnv* env,
-//    jthread thread,
-//    jobject* monitor_ptr);
-//
+//  jvmtiError (JNICALL *GetCurrentContendedMonitor) (jvmtiEnv* env, jthread thread, jobject* monitor_ptr);
+static jvmtiError GetCurrentContendedMonitor(jvmtiEnv* env, jthread thread, jobject* monitor_ptr) {
+  return (*env)->GetCurrentContendedMonitor(env, thread, monitor_ptr);
+}
+
 //  /*   12 : Run Agent Thread */
-//  jvmtiError (JNICALL *RunAgentThread) (jvmtiEnv* env,
-//    jthread thread,
-//    jvmtiStartFunction proc,
-//    const void* arg,
-//    jint priority);
-//
+//  jvmtiError (JNICALL *RunAgentThread) (jvmtiEnv* env, jthread thread, jvmtiStartFunction proc, const void* arg, jint priority);
+static jvmtiError RunAgentThread(jvmtiEnv* env, jthread thread, jvmtiStartFunction proc, const void* arg, jint priority) {
+  return (*env)->RunAgentThread(env, thread, proc, arg, priority);
+}
+
 //  /*   13 : Get Top Thread Groups */
-//  jvmtiError (JNICALL *GetTopThreadGroups) (jvmtiEnv* env,
-//    jint* group_count_ptr,
-//    jthreadGroup** groups_ptr);
-//
+//  jvmtiError (JNICALL *GetTopThreadGroups) (jvmtiEnv* env, jint* group_count_ptr, jthreadGroup** groups_ptr);
+static jvmtiError GetTopThreadGroups(jvmtiEnv* env, jint* group_count_ptr, jthreadGroup** groups_ptr) {
+  return (*env)->GetTopThreadGroups(env, group_count_ptr, groups_ptr);
+}
+
 //  /*   14 : Get Thread Group Info */
-//  jvmtiError (JNICALL *GetThreadGroupInfo) (jvmtiEnv* env,
-//    jthreadGroup group,
-//    jvmtiThreadGroupInfo* info_ptr);
-//
+//  jvmtiError (JNICALL *GetThreadGroupInfo) (jvmtiEnv* env, jthreadGroup group, jvmtiThreadGroupInfo* info_ptr);
+static jvmtiError GetThreadGroupInfo(jvmtiEnv* env, jthreadGroup group, jvmtiThreadGroupInfo* info_ptr) {
+  return (*env)->GetThreadGroupInfo(env, group, info_ptr);
+}
+
 //  /*   15 : Get Thread Group Children */
-//  jvmtiError (JNICALL *GetThreadGroupChildren) (jvmtiEnv* env,
-//    jthreadGroup group,
-//    jint* thread_count_ptr,
-//    jthread** threads_ptr,
-//    jint* group_count_ptr,
-//    jthreadGroup** groups_ptr);
-//
+//  jvmtiError (JNICALL *GetThreadGroupChildren) (jvmtiEnv* env, jthreadGroup group, jint* thread_count_ptr, jthread** threads_ptr, jint* group_count_ptr, jthreadGroup** groups_ptr);
+static jvmtiError GetThreadGroupChildren(jvmtiEnv* env, jthreadGroup group, jint* thread_count_ptr, jthread** threads_ptr, jint* group_count_ptr, jthreadGroup** groups_ptr) {
+  return (*env)->GetThreadGroupChildren(env, group, thread_count_ptr, threads_ptr, group_count_ptr, groups_ptr);
+}
+
 //  /*   16 : Get Frame Count */
-//  jvmtiError (JNICALL *GetFrameCount) (jvmtiEnv* env,
-//    jthread thread,
-//    jint* count_ptr);
-//
+//  jvmtiError (JNICALL *GetFrameCount) (jvmtiEnv* env, jthread thread, jint* count_ptr);
+static jvmtiError GetFrameCount(jvmtiEnv* env, jthread thread, jint* count_ptr) {
+  return (*env)->GetFrameCount(env, thread, count_ptr);
+}
+
 //  /*   17 : Get Thread State */
 //  jvmtiError (JNICALL *GetThreadState) (jvmtiEnv* env, jthread thread, jint* thread_state_ptr);
 static jvmtiError GetThreadState(jvmtiEnv* env, jthread thread, jint* thread_state_ptr) {
@@ -126,19 +134,38 @@ static jvmtiError GetCurrentThread(jvmtiEnv* env, jthread* thread_ptr) {
 //    jint depth,
 //    jmethodID* method_ptr,
 //    jlocation* location_ptr);
-//
+static jvmtiError GetFrameLocation(jvmtiEnv* env,
+    jthread thread,
+    jint depth,
+    jmethodID* method_ptr,
+    jlocation* location_ptr) {
+  return (*env)->GetFrameLocation(env, thread, depth, method_ptr, location_ptr);
+}
+
 //  /*   20 : Notify Frame Pop */
 //  jvmtiError (JNICALL *NotifyFramePop) (jvmtiEnv* env,
 //    jthread thread,
 //    jint depth);
-//
+static jvmtiError NotifyFramePop(jvmtiEnv* env,
+    jthread thread,
+    jint depth) {
+  return (*env)->NotifyFramePop(env, thread, depth);
+}
+
 //  /*   21 : Get Local Variable - Object */
 //  jvmtiError (JNICALL *GetLocalObject) (jvmtiEnv* env,
 //    jthread thread,
 //    jint depth,
 //    jint slot,
 //    jobject* value_ptr);
-//
+static jvmtiError GetLocalObject(jvmtiEnv* env,
+    jthread thread,
+    jint depth,
+    jint slot,
+    jobject* value_ptr) {
+  return (*env)->GetLocalObject(env, thread, depth, slot, value_ptr);
+}
+
 //  /*   22 : Get Local Variable - Int */
 //  jvmtiError (JNICALL *GetLocalInt) (jvmtiEnv* env,
 //    jthread thread,
