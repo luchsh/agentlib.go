@@ -37,6 +37,10 @@ func (vm JVM) raw() jni.VM {
 	return jni.VM(vm)
 }
 
+func (vm JVM) VM() jni.VM {
+	return vm.raw()
+}
+
 // support of retrieving env for JNI, JVMTI, etc.
 func (vm JVM) GetEnv(ver int) uintptr {
 	env,e := vm.raw().GetEnv(ver)
@@ -49,6 +53,11 @@ func (vm JVM) GetEnv(ver int) uintptr {
 func (e JniEnv) raw() jni.Env {
 	return jni.Env(e)
 }
+
+func (e JniEnv) Env() jni.Env {
+	return jni.Env(e)
+}
+
 
 func JniGetCreatedJavaVMs() (vms []jni.VM) {
 	l := 128
