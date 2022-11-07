@@ -72,8 +72,9 @@ func parseJvmtiFuncDecl(s string) fn {
 	for _, p := range strings.Split(params, ",") {
 		fds := strings.Fields(p)
 		if len(fds) == 1 {
-			f.ptype = append(f.ptype, fds[0])
-			f.pname = append(f.pname, "")
+			// SKIP ...
+			//f.ptype = append(f.ptype, fds[0])
+			//f.pname = append(f.pname, "")
 		} else if len(fds) >= 2 {
 			f.ptype = append(f.ptype, strings.Join(fds[0:len(fds)-1], " "))
 			f.pname = append(f.pname, fds[len(fds)-1])
@@ -186,7 +187,7 @@ func (jp *jvmtiPipe) parse() {
 			return
 		}
 		ln := string(bs)
-		if strings.HasPrefix(ln, "enum {") {
+		if strings.Contains(ln, "enum {") {
 			var cconsts []string
 			for {
 				bs, _, e := rd.ReadLine()
