@@ -4,12 +4,11 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ClarkGuan/jni"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	vm jni.VM
+	vm JVM
 	env JniEnv // only for the creating thread
 )
 
@@ -28,4 +27,12 @@ func TestGetCreatedJavaVMs(t *testing.T) {
 func TestCreateJavaVM(t *testing.T) {
 	assert.NotEqual(t, int(vm), 0)
 	assert.NotEqual(t, int(env), 0)
+}
+
+func TestFindClass(t *testing.T) {
+	vm.JniRun(func(env JniEnv) {
+		jni := env.raw()
+		clazz := jni.FindClass("Ljava/lang/Object;")
+		assert.NotZero(t, uintptr(clazz))
+	})
 }

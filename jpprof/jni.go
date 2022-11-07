@@ -19,6 +19,7 @@ import "C"
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"unsafe"
 
@@ -31,6 +32,23 @@ const (
 
 type JniEnv jni.Env
 type JVM jni.VM
+
+func (vm JVM) raw() jni.VM {
+	return jni.VM(vm)
+}
+
+// support of retrieving env for JNI, JVMTI, etc.
+func (vm JVM) GetEnv(ver int) uintptr {
+	env,e := vm.raw().GetEnv(ver)
+	if e != jni.JNI_OK {
+		return 0
+	}
+	return uintptr(env)
+}
+
+func (e JniEnv) raw() jni.Env {
+	return jni.Env(e)
+}
 
 func JniGetCreatedJavaVMs() (vms []jni.VM) {
 	l := 128
@@ -48,8 +66,8 @@ func JniGetCreatedJavaVMs() (vms []jni.VM) {
 }
 
 // Create a Java VM
-func JniCreateJavaVM(args string) (jni.VM, JniEnv) {
-	var vmp jni.VM
+func JniCreateJavaVM(args string) (JVM, JniEnv) {
+	var vmp JVM
 	var envp JniEnv
 
 	vmargs := C.malloc(C.sizeof_JavaVMOption)
@@ -87,6 +105,19 @@ func CurrentVM() jni.VM {
 		return vms[0]
 	}
 	return 0
+}
+
+// Lock the target OS thread to prevent goroutine scheduling
+func (vm JVM) JniRun(f func(JniEnv)) {
+	if f != nil {
+		env,res := vm.raw().AttachCurrentThread()
+		if res != 0 {
+			panic("Failed to attach current thread")
+		}
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+		f(JniEnv(env))
+	}
 }
 
 var jniErrorTextMap = map[int]string {

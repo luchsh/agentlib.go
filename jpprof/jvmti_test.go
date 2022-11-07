@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-// TODO: exclude for now
-// +build ignore
-
-package jpprof_test
+package jpprof
 
 import (
 	"io/ioutil"
@@ -27,6 +24,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const dataDir = "testdata"
@@ -35,9 +34,16 @@ var (
 	javaHome string
 	javaExec string
 	javaMajorVer int
+	jvmti JvmtiEnv
 )
 
-func TestBasic(t *testing.T) {
+
+func TestGetJvmtiEnv(t *testing.T) {
+	jvmti = JvmtiEnv(vm.GetEnv(JVMTI_VERSION_1_1))
+	assert.NotZero(t, uintptr(jvmti))
+}
+
+func testBasic(t *testing.T) {
 	dir := t.TempDir()
 
 	setup(t)
