@@ -1,6 +1,6 @@
 package main
 
-import "github.com/luchsh/jpprof/jpprof"
+import "github.com/luchsh/agentlib.go/jpprof"
 
 func main() {
 	println("agentlib.go")
