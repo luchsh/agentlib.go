@@ -41,9 +41,16 @@ type JavaVM struct {
 	jvm   VM
 }
 
+// The JavaVM instance for main thread
+// TODO: maybe we should remove curVM
+var theVM *JavaVM
+
 // create and launch a new Java virtual machine
 // with current thread attached as the main thread
 func Exec(args []string) (*JavaVM, error) {
+	if theVM != nil {
+		return nil, fmt.Errorf("Cannot create multiple JVM in the same process")
+	}
 	jvm, jni := jniCreateJavaVM(args)
 	if jvm == 0 || jni == 0 {
 		return nil, fmt.Errorf("Failed to create JavaVM with args: %s", strings.Join(args, " "))
@@ -53,12 +60,52 @@ func Exec(args []string) (*JavaVM, error) {
 		return nil, fmt.Errorf("GetEnv error=%d",err)
 	}
 
-	vm := &JavaVM{
+	theVM = &JavaVM{
 		jni: Env(jni),
 		jvm: VM(jvm),
 		jvmti: jvmtiEnv(jvmti),
 	}
-	return vm, nil
+	return theVM, nil
+}
+
+// create a usable *JavaVM instance from raw jni.VM
+func createJavaVM(vm VM) (*JavaVM, error) {
+	if vm == 0 {
+		return nil, fmt.Errorf("NULL VM")
+	}
+	env, i := vm.AttachCurrentThread()
+	if i != JNI_OK {
+		return nil, fmt.Errorf("Cannot attach current thread, error=%s", describeJNIError(i))
+	}
+	je, e := vm.GetEnv(JVMTI_VERSION_1_1)
+	if e != JNI_OK {
+		return nil, fmt.Errorf("Cannot get JVMTI env, error=%s", describeJNIError(e))
+	}
+	return &JavaVM {
+		jni: env,
+		jvmti: jvmtiEnv(je),
+		jvm: vm,
+	}, nil
+}
+
+// Get the context VM for a goroutine to use
+// must be called after setting up the global unique VM instance
+// e.g. calling Exec(...)
+func contextVM() (*JavaVM, error) {
+	if theVM == nil {
+		return nil, fmt.Errorf("JavaVM instance not found for this process")
+	}
+	return createJavaVM(theVM.jvm)
+}
+
+// Retrieve the unique VM instance
+// Current spec only allows one JVM in each process
+func CurrentVM() *JavaVM {
+	v,e := contextVM()
+	if e != nil {
+		panic(e)
+	}
+	return v
 }
 
 // Retrieve all the properties from the Java VM

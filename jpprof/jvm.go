@@ -48,7 +48,7 @@ func (e JniEnv) Env() jni.Env {
 	return jni.Env(e)
 }
 
-func JniGetCreatedJavaVMs() (vms []jni.VM) {
+func jniGetCreatedJavaVMs() (vms []jni.VM) {
 	l := 128
 	buf := C.malloc(C.size_t(l * ptrSize))
 	defer C.free(buf)
@@ -85,24 +85,15 @@ func jniCreateJavaVM(args []string) (vmp jni.VM, envp jni.Env) {
 
 	e := C.JNI_CreateJavaVM((**C.JavaVM)(unsafe.Pointer(&vmp)), (*unsafe.Pointer)(unsafe.Pointer(&envp)), vmargs)
 	if e != jni.JNI_OK {
-		fmt.Printf("Failed to create Java VM, error=%d (%s)\n", e, DescribeJNIError(e))
+		fmt.Printf("Failed to create Java VM, error=%d (%s)\n", e, describeJNIError(int(e)))
 		return 0, 0
 	}
 
 	return vmp, envp
 }
 
-// Retrieve current virtual machine of this process if exists
-func CurrentVM() jni.VM {
-	vms := JniGetCreatedJavaVMs()
-	if len(vms) > 0 {
-		return vms[0]
-	}
-	return 0
-}
-
 // Lock the target OS thread to prevent goroutine scheduling
-func (vm JVM) JniRun(f func(JniEnv)) {
+func (vm JVM) jniRun(f func(JniEnv)) {
 	if f != nil {
 		env, res := vm.raw().AttachCurrentThread()
 		if res != 0 {
@@ -123,8 +114,8 @@ var jniErrorTextMap = map[int]string{
 	jni.JNI_EINVAL:    "JNI_EINVAL",
 }
 
-func DescribeJNIError(ev C.int) string {
-	if tv, ok := jniErrorTextMap[int(ev)]; ok {
+func describeJNIError(ev int) string {
+	if tv, ok := jniErrorTextMap[ev]; ok {
 		return tv
 	}
 	return "Unknown error"

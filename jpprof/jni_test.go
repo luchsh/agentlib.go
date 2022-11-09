@@ -44,17 +44,12 @@ func init() {
 }
 
 func TestGetCreatedJavaVMs(t *testing.T) {
-	vms := JniGetCreatedJavaVMs()
+	vms := jniGetCreatedJavaVMs()
 	assert.Equal(t, len(vms), 1)
 }
 
-func TestCreateJavaVM(t *testing.T) {
-	assert.NotEqual(t, int(vm), 0)
-	assert.NotEqual(t, int(env), 0)
-}
-
 func TestFindClass(t *testing.T) {
-	JVM(vm).JniRun(func(env JniEnv) {
+	JVM(vm).jniRun(func(env JniEnv) {
 		jni := env.raw()
 		clazz := jni.FindClass("Ljava/lang/Object;")
 		assert.NotZero(t, uintptr(clazz))

@@ -24,6 +24,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestCreateJavaVM(t *testing.T) {
+	vm,e := Exec([]string{}) // cannot create more than one VMs
+	assert.Nil(t, vm)
+	assert.NotNil(t, e)
+}
+
 func TestGetProperties(t *testing.T) {
 	wantedPrpos := []string {
 		"java.vm.vendor",
