@@ -19,6 +19,7 @@
 package jpprof
 
 //#include<jni.h>
+//#include<stdlib.h>
 import "C"
 
 import (
@@ -60,8 +61,8 @@ func Exec(args []string) (*JavaVM, error) {
 	return vm, nil
 }
 
-
-func (jvm *JavaVM) GetProperties() (map[string]string, error) {
+// Retrieve all the properties from the Java VM
+func (jvm *JavaVM) GetSystemProperties() (map[string]string, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -79,7 +80,7 @@ func (jvm *JavaVM) GetProperties() (map[string]string, error) {
 	res := make(map[string]string)
 	for i := 0; i < int(n); i++ {
 		addr := uintptr(unsafe.Pointer(p)) + uintptr(i) * ptrSize
-		ks := (*C.char)(unsafe.Pointer(addr))
+		ks := *(**C.char)(unsafe.Pointer(addr))
 		var vs *C.char
 		if e := jvm.jvmti.getSystemProperty(ks, &vs); e != JVMTI_ERROR_NONE {
 			return nil, fmt.Errorf("failed get prop %s", C.GoString(ks))
@@ -90,7 +91,31 @@ func (jvm *JavaVM) GetProperties() (map[string]string, error) {
 	return res, nil
 }
 
-func (jvm *JavaVM) GetProperty(key string) string {
-	return ""
+// Retrieve property value of given key
+// returns "" if not found or error
+func (jvm *JavaVM) GetSystemProperty(key string) string {
+	var vs *C.char
+	ks := C.CString(key)
+	defer C.free(unsafe.Pointer(ks))
+	if e := jvm.jvmti.getSystemProperty(ks, &vs); e != JVMTI_ERROR_NONE {
+		return ""
+	}
+	defer jvm.jvmti.deallocate((*C.uchar)(unsafe.Pointer(vs)))
+	return C.GoString(vs)
 }
 
+// Set the value of target system property
+// only allowed to be called at agent OnLoad phase
+// According to https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html#GetSystemProperty
+func (jvm *JavaVM) SetSystemProperty(key, value string) error {
+	ck := C.CString(key)
+	cv := C.CString(value)
+	defer func() {
+		C.free(unsafe.Pointer(ck))
+		C.free(unsafe.Pointer(cv))
+	}()
+	if e := jvm.jvmti.setSystemProperty(ck, cv); e != JVMTI_ERROR_NONE {
+		return fmt.Errorf("Failed to set property, error=%v\n", e)
+	}
+	return nil
+}

@@ -33,13 +33,36 @@ func TestGetProperties(t *testing.T) {
 		"java.library.path",
 		"java.class.path",
 	}
-	props, e := jvm.GetProperties()
+	props, e := jvm.GetSystemProperties()
 	assert.Nil(t, e)
 	assert.GreaterOrEqual(t, len(props), len(wantedPrpos))
 	for _,wp := range wantedPrpos {
-		t.Logf("%s=%s", wp, props[wp])
+		//t.Logf("%s=%s", wp, props[wp])
 		if _,ok := props[wp]; !ok {
 			t.Fatalf("mandatory property %s not found", wp)
 		}
 	}
+
+	for _,wp := range wantedPrpos {
+		vs := jvm.GetSystemProperty(wp)
+		assert.Greater(t, len(vs), 0)
+	}
 }
+
+/*
+// TODO: run this test at agent OnLoad phase
+func TestGetSetProperty(t *testing.T) {
+	//key := fmt.Sprintf("java.test%d", time.Now().Nanosecond())
+	key := "java.vm.vendor"
+	v := jvm.GetSystemProperty(key)
+	assert.Equal(t, len(v), 0) // should not exist at first
+
+	value := fmt.Sprintf("value%d", time.Now().Nanosecond())
+	e := jvm.SetSystemProperty(key, value)
+	assert.Nil(t, e)
+
+	nv := jvm.GetSystemProperty(key)
+	assert.NotEqual(t, len(nv), 0)
+	assert.Equal(t, nv, value)
+}
+*/

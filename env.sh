@@ -18,6 +18,8 @@ EOF
 }
 
 function setup {
+  detect_java_home
+
   if [[ "x${OS}" = "xdarwin" ]]; then
     export DYLD_LIBRARY_PATH=${JAVA_HOME}/lib/server:${DYLD_LIBRARY_PATH}
   elif [[ "x${OS}" = "xlinux" ]]; then
@@ -30,8 +32,6 @@ function setup {
     fi
     export LD_LIBRARY_PATH=${JAVA_HOME}/lib/server:${DYLD_LIBRARY_PATH}
   fi
-
-  detect_java_home
 
   if [[ "x${JAVA_HOME}" = "x" ]] || [[ ! -d "${JAVA_HOME}" ]]; then
     echo "Canot find a valid JAVA_HOME, aborting..."
