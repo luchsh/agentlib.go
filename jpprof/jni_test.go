@@ -15,22 +15,32 @@
 package jpprof
 
 import (
+	"fmt"
 	"runtime"
 	"testing"
 
+	"github.com/ClarkGuan/jni"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	vm  JVM
-	env JniEnv // only for the creating thread
+	vm  jni.VM
+	env jni.Env // only for the creating thread
+	jvm *JavaVM
 )
 
 //  only create the VM once, spec does not support creating multiple VMs
 func init() {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	vm, env = JniCreateJavaVM("-verbose:gc -check:jni -Djava.class.path=./testdata")
+	//vm, env = jniCreateJavaVM([]string{"-verbose:gc", "-check:jni", "-Djava.class.path=./testdata"})
+	var err error
+	jvm, err = Exec([]string{"-verbose:gc", "-check:jni", "-Djava.class.path=./testdata"})
+	if err != nil {
+		panic(fmt.Errorf("Failed to create JavaVM, err=%v", err))
+	}
+	vm = jvm.jvm
+	env = jvm.jni
 }
 
 func TestGetCreatedJavaVMs(t *testing.T) {
@@ -44,7 +54,7 @@ func TestCreateJavaVM(t *testing.T) {
 }
 
 func TestFindClass(t *testing.T) {
-	vm.JniRun(func(env JniEnv) {
+	JVM(vm).JniRun(func(env JniEnv) {
 		jni := env.raw()
 		clazz := jni.FindClass("Ljava/lang/Object;")
 		assert.NotZero(t, uintptr(clazz))

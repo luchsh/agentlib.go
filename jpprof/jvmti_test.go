@@ -25,6 +25,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ClarkGuan/jni"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,8 +40,11 @@ var (
 
 
 func TestGetjvmtiEnv(t *testing.T) {
-	jvmti = jvmtiEnv(vm.GetEnv(JVMTI_VERSION_1_1))
-	assert.NotZero(t, uintptr(jvmti))
+	env, e := vm.GetEnv(JVMTI_VERSION_1_1)
+	if e != jni.JNI_OK {
+		t.Fatalf("Failed to get env")
+	}
+	assert.NotZero(t, uintptr(env))
 }
 
 func testBasic(t *testing.T) {

@@ -20,7 +20,6 @@ import "C"
 import (
 	"fmt"
 	"runtime"
-	"strings"
 	"unsafe"
 
 	"github.com/ClarkGuan/jni"
@@ -41,15 +40,6 @@ func (vm JVM) VM() jni.VM {
 	return vm.raw()
 }
 
-// support of retrieving env for JNI, JVMTI, etc.
-func (vm JVM) GetEnv(ver int) uintptr {
-	env,e := vm.raw().GetEnv(ver)
-	if e != jni.JNI_OK {
-		return 0
-	}
-	return uintptr(env)
-}
-
 func (e JniEnv) raw() jni.Env {
 	return jni.Env(e)
 }
@@ -58,7 +48,6 @@ func (e JniEnv) Env() jni.Env {
 	return jni.Env(e)
 }
 
-
 func JniGetCreatedJavaVMs() (vms []jni.VM) {
 	l := 128
 	buf := C.malloc(C.size_t(l * ptrSize))
@@ -66,7 +55,7 @@ func JniGetCreatedJavaVMs() (vms []jni.VM) {
 	var n C.jsize
 	if 0 == C.JNI_GetCreatedJavaVMs((**C.JavaVM)(buf), C.jsize(l), &n) {
 		for i := C.jsize(0); i < n; i++ {
-			p := uintptr(buf)+uintptr(i)*ptrSize
+			p := uintptr(buf) + uintptr(i)*ptrSize
 			addr := *(*uintptr)(unsafe.Pointer(p))
 			vms = append(vms, jni.VM(addr))
 		}
@@ -75,10 +64,7 @@ func JniGetCreatedJavaVMs() (vms []jni.VM) {
 }
 
 // Create a Java VM
-func JniCreateJavaVM(args string) (JVM, JniEnv) {
-	var vmp JVM
-	var envp JniEnv
-
+func jniCreateJavaVM(args []string) (vmp jni.VM, envp jni.Env) {
 	vmargs := C.malloc(C.sizeof_JavaVMOption)
 	defer C.free(vmargs)
 	jva := (*C.JavaVMInitArgs)(vmargs)
@@ -86,13 +72,12 @@ func JniCreateJavaVM(args string) (JVM, JniEnv) {
 	jva.nOptions = 0
 	jva.ignoreUnrecognized = jni.JNI_TRUE
 	if len(args) > 0 {
-		fds := strings.Fields(args)
-		opts := C.malloc(C.size_t(C.sizeof_JavaVMOption * len(fds)))
+		opts := C.malloc(C.size_t(C.sizeof_JavaVMOption * len(args)))
 		defer C.free(opts)
-		jva.nOptions = C.jint(len(fds))
+		jva.nOptions = C.jint(len(args))
 		jva.options = (*C.JavaVMOption)(opts)
-		for i,a := range fds {
-			o := (*C.JavaVMOption)(unsafe.Pointer(uintptr(opts)+uintptr(i)*C.sizeof_JavaVMOption))
+		for i, a := range args {
+			o := (*C.JavaVMOption)(unsafe.Pointer(uintptr(opts) + uintptr(i)*C.sizeof_JavaVMOption))
 			o.optionString = C.CString(a)
 		}
 	}
@@ -101,7 +86,7 @@ func JniCreateJavaVM(args string) (JVM, JniEnv) {
 	e := C.JNI_CreateJavaVM((**C.JavaVM)(unsafe.Pointer(&vmp)), (*unsafe.Pointer)(unsafe.Pointer(&envp)), vmargs)
 	if e != jni.JNI_OK {
 		fmt.Printf("Failed to create Java VM, error=%d (%s)\n", e, DescribeJNIError(e))
-		return 0,0
+		return 0, 0
 	}
 
 	return vmp, envp
@@ -119,7 +104,7 @@ func CurrentVM() jni.VM {
 // Lock the target OS thread to prevent goroutine scheduling
 func (vm JVM) JniRun(f func(JniEnv)) {
 	if f != nil {
-		env,res := vm.raw().AttachCurrentThread()
+		env, res := vm.raw().AttachCurrentThread()
 		if res != 0 {
 			panic("Failed to attach current thread")
 		}
@@ -129,17 +114,17 @@ func (vm JVM) JniRun(f func(JniEnv)) {
 	}
 }
 
-var jniErrorTextMap = map[int]string {
-	jni.JNI_ERR: "JNI_ERR",
+var jniErrorTextMap = map[int]string{
+	jni.JNI_ERR:       "JNI_ERR",
 	jni.JNI_EDETACHED: "JNI_EDETACHED",
-	jni.JNI_EVERSION: "JNI_EVERSION",
-	jni.JNI_ENOMEM: "JNI_ENOMEM",
-	jni.JNI_EEXIST: "JNI_EEXIST",
-	jni.JNI_EINVAL: "JNI_EINVAL",
+	jni.JNI_EVERSION:  "JNI_EVERSION",
+	jni.JNI_ENOMEM:    "JNI_ENOMEM",
+	jni.JNI_EEXIST:    "JNI_EEXIST",
+	jni.JNI_EINVAL:    "JNI_EINVAL",
 }
 
 func DescribeJNIError(ev C.int) string {
-	if tv,ok := jniErrorTextMap[int(ev)]; ok {
+	if tv, ok := jniErrorTextMap[int(ev)]; ok {
 		return tv
 	}
 	return "Unknown error"
