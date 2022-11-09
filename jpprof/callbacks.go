@@ -36,17 +36,17 @@ const (
 // JvmtiCallbacks holds the JVMTI event callbacks
 type JvmtiCallbacks struct {
 	// to hold callbacks
-	cbs []func(JvmtiEnv, ...JvmtiArg)
+	cbs []func(jvmtiEnv, ...JvmtiArg)
 }
 
 func (callbacks *JvmtiCallbacks) init() {
-	callbacks.cbs = make([]func(JvmtiEnv, ...JvmtiArg), JVMTI_EVENT_TYPE_LIMIT-JVMTI_MIN_EVENT_TYPE_VAL+1)
+	callbacks.cbs = make([]func(jvmtiEnv, ...JvmtiArg), JVMTI_EVENT_TYPE_LIMIT-JVMTI_MIN_EVENT_TYPE_VAL+1)
 }
 
 type JvmtiArg uintptr
 
 // SetCallback links a go method to process a specific JVMTI event
-func (callbacks *JvmtiCallbacks) SetCallback(eventId int, fn func(JvmtiEnv, ...JvmtiArg)) {
+func (callbacks *JvmtiCallbacks) SetCallback(eventId int, fn func(jvmtiEnv, ...JvmtiArg)) {
 	if eventId <= JVMTI_MAX_EVENT_TYPE_VAL && eventId >= JVMTI_MIN_EVENT_TYPE_VAL {
 		callbacks.cbs[eventId-JVMTI_MIN_EVENT_TYPE_VAL] = fn
 		C.EnableJvmtiCallback(unsafe.Pointer(_lib.jvmti), C.int(eventId))
@@ -57,7 +57,7 @@ func (callbacks *JvmtiCallbacks) SetCallback(eventId int, fn func(JvmtiEnv, ...J
 	}
 }
 
-func (callbacks *JvmtiCallbacks) dispatch(eventId int, jvmti JvmtiEnv, args ...JvmtiArg) {
+func (callbacks *JvmtiCallbacks) dispatch(eventId int, jvmti jvmtiEnv, args ...JvmtiArg) {
 	fn := callbacks.cbs[eventId-JVMTI_MIN_EVENT_TYPE_VAL]
 	if fn != nil {
 		fn(jvmti, args...)
@@ -100,7 +100,7 @@ func OnJvmtiEvent(eventId int, jvmti, params uintptr, paramsLen int) {
 		return
 	}
 	callbacks := _lib.GetCallbacks()
-	jvmtiEnv := JvmtiEnv(jvmti)
+	jvmtiEnv := jvmtiEnv(jvmti)
 	ra := newRawArray(params, paramsLen)
 
 	args := make([]JvmtiArg, paramsLen)

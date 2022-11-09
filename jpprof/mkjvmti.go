@@ -85,7 +85,7 @@ func parseJvmtiFuncDecl(s string) fn {
 
 func (f *fn) cdecl() string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%s %s(", f.ret, f.name))
+	sb.WriteString(fmt.Sprintf("%s jvmti%s(", f.ret, f.name))
 	for i := 0; i < len(f.ptype); i++ {
 		sb.WriteString(fmt.Sprintf("%s %s", f.ptype[i], f.pname[i]))
 		if i < len(f.ptype)-1 {
@@ -143,10 +143,17 @@ func goTypeOfC(ct string) string {
 	return ct
 }
 
+func toGoPrivName(name string) string {
+	if name == "" {
+		return name
+	}
+	return strings.ToLower(name[0:1])+name[1:]
+}
+
 func (f *fn) goimpl() string {
 	var sb strings.Builder
 	//sb.WriteString("//TODO: manual adjustment needed here\n")
-	sb.WriteString(fmt.Sprintf("func (jvmti JvmtiEnv) %s(", f.name))
+	sb.WriteString(fmt.Sprintf("func (jvmti jvmtiEnv) %s(", toGoPrivName(f.name)))
 	for i := 1; i < len(f.ptype); i++ {
 		if len(f.pname[i]) > 0 {
 			sb.WriteString(f.pname[i])
@@ -159,7 +166,7 @@ func (f *fn) goimpl() string {
 		}
 	}
 	sb.WriteString(fmt.Sprintf(") C.%s {\n", f.ret))
-	sb.WriteString(fmt.Sprintf("  return C.%s(", f.name))
+	sb.WriteString(fmt.Sprintf("  return C.jvmti%s(", f.name))
 	for i := 0; i < len(f.ptype); i++ {
 		if i == 0 {
 			sb.WriteString("jvmti.raw(), ")
@@ -241,14 +248,14 @@ func (jp *jvmtiPipe) printGoWrapper() {
 
 func (jp *jvmtiPipe) printJvmtiDef() {
 	fmt.Fprintf(jp.out, "%s\n",
-`// JvmtiEnv corresponds to jvmtiEnv*
-type JvmtiEnv uintptr
+`// jvmtiEnv corresponds to jvmtiEnv*
+type jvmtiEnv uintptr
 
-func (jvmti JvmtiEnv) raw() *C.jvmtiEnv {
+func (jvmti jvmtiEnv) raw() *C.jvmtiEnv {
 	return (*C.jvmtiEnv)(unsafe.Pointer(jvmti))
 }
 
-func (jvmti JvmtiEnv) asPointer() unsafe.Pointer {
+func (jvmti jvmtiEnv) asPointer() unsafe.Pointer {
 	return unsafe.Pointer(jvmti)
 }`)
 }

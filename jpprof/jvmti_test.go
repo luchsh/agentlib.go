@@ -34,12 +34,12 @@ var (
 	javaHome string
 	javaExec string
 	javaMajorVer int
-	jvmti JvmtiEnv
+	jvmti jvmtiEnv
 )
 
 
-func TestGetJvmtiEnv(t *testing.T) {
-	jvmti = JvmtiEnv(vm.GetEnv(JVMTI_VERSION_1_1))
+func TestGetjvmtiEnv(t *testing.T) {
+	jvmti = jvmtiEnv(vm.GetEnv(JVMTI_VERSION_1_1))
 	assert.NotZero(t, uintptr(jvmti))
 }
 

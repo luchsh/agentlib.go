@@ -25,7 +25,7 @@ type AgentLib struct {
 	// command line options to this agent
 	Options string
 	// current jvmti env
-	jvmti JvmtiEnv
+	jvmti jvmtiEnv
 	// Callbacks
 	callbacks JvmtiCallbacks
 }
@@ -50,7 +50,7 @@ func OnAgentLoad(javaVM, jvmti uintptr, options *C.char) {
 	_lib = new(AgentLib)
 	_lib.javaVM = JVM(javaVM)
 	_lib.Options = C.GoString(options)
-	_lib.jvmti = JvmtiEnv(jvmti)
+	_lib.jvmti = jvmtiEnv(jvmti)
 	_lib.callbacks.init()
 
 	if Onload != nil {
