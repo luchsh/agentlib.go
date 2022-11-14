@@ -20,6 +20,7 @@ package jpprof
 
 //#include<jni.h>
 //#include<stdlib.h>
+//#include<jvmti.h>
 import "C"
 
 import (
@@ -165,4 +166,111 @@ func (jvm *JavaVM) SetSystemProperty(key, value string) error {
 		return fmt.Errorf("Failed to set property, error=%v\n", e)
 	}
 	return nil
+}
+
+type Frame struct {
+	PC uintptr
+	Func string
+	Source string
+}
+
+func (f *Frame) String() string {
+	return fmt.Sprintf("%s@%p(%s)", f.Func, unsafe.Pointer(f.PC), f.Source)
+}
+
+type Thread struct {
+	jt C.jobject
+	state int
+	IsDaemon bool
+	Name string
+	StackTraces []Frame
+}
+
+func (t *Thread) String() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Thread@%p: %s, is_daemon=%v\n", unsafe.Pointer(t.jt), t.Name, t.IsDaemon))
+	for i,fr := range t.StackTraces {
+		sb.WriteString(fmt.Sprintf("\t[%d] %s\n", i, fr.String()))
+	}
+	return sb.String()
+}
+
+func (jvm *JavaVM) fillThread(jt C.jobject) (rt *Thread, err error) {
+	rt = &Thread{
+		jt: jt,
+	}
+	ti := &C.struct__jvmtiThreadInfo{}
+	if e := jvm.jvmti.getThreadInfo(rt.jt, ti); e != JVMTI_ERROR_NONE {
+		return nil, fmt.Errorf("JVMTI GetThreadInfo returns %v", e)
+	}
+	rt.IsDaemon = (ti.is_daemon==C.JNI_TRUE)
+	rt.Name = C.GoString(ti.name)
+
+	var tst C.jint
+	if e := jvm.jvmti.getThreadState(rt.jt, &tst); e != JVMTI_ERROR_NONE {
+		return nil, fmt.Errorf("JVMTI GetThreadState returns %v", e)
+	}
+	rt.state = int(tst)
+	rt.StackTraces,err = jvm.stackTraceOf(jt)
+	return
+}
+
+func (jvm *JavaVM) stackTraceOf(jt C.jobject) (frames []Frame, err error) {
+	var nfrs C.jint
+	var jfrs *C.struct__jvmtiFrameInfo
+	flmt := C.jint(1024)
+	if e := jvm.jvmti.allocate(C.jlong(C.sizeof_struct__jvmtiFrameInfo)*C.jlong(flmt), (**C.uchar)(unsafe.Pointer(&jfrs))); e != JVMTI_ERROR_NONE {
+		defer jvm.jvmti.deallocate((*C.uchar)(unsafe.Pointer(jfrs)))
+	}
+	if e := jvm.jvmti.getStackTrace(jt, C.jint(0), flmt, jfrs, &nfrs); e != JVMTI_ERROR_NONE {
+		return nil, fmt.Errorf("JVMTI GetStackTrace failed with %v", e)
+	}
+	for i := 0; i < int(nfrs); i++ {
+		p := (*C.struct__jvmtiFrameInfo)(unsafe.Pointer((uintptr(unsafe.Pointer(jfrs)) + uintptr(C.sizeof_struct__jvmtiFrameInfo)*uintptr(i))))
+		//jloc := p.location
+		var name *C.char
+		var sig *C.char
+		var gen *C.char
+		if e := jvm.jvmti.getMethodName(p.method, &name, &sig, &gen); e != JVMTI_ERROR_NONE {
+			return nil,fmt.Errorf("JVMTI GetMethodName failed with %v", e)
+		}
+		defer func() {
+			jvm.jvmti.deallocate((*C.uchar)(unsafe.Pointer(name)))
+			jvm.jvmti.deallocate((*C.uchar)(unsafe.Pointer(sig)))
+			jvm.jvmti.deallocate((*C.uchar)(unsafe.Pointer(gen)))
+		}()
+
+		fr := Frame {
+			PC: uintptr(p.location),
+			Func: fmt.Sprintf("%s:%s:%s", C.GoString(name), C.GoString(sig), C.GoString(gen)),
+		}
+		frames = append(frames, fr)
+	}
+	return
+}
+
+func (jvm *JavaVM) CurrentThread() (rt *Thread, err error) {
+	var jt C.jobject
+	if e := jvm.jvmti.getCurrentThread(&jt); e != JVMTI_ERROR_NONE {
+		return nil, fmt.Errorf("JVMTI GetCurrentThread returns %v", e)
+	}
+	return jvm.fillThread(jt)
+}
+
+func (jvm *JavaVM) DumpThreads() (thrds []*Thread, err error) {
+	var jts *C.jobject
+	var nt C.jint
+	if e := jvm.jvmti.getAllThreads(&nt, &jts); e != JVMTI_ERROR_NONE {
+		return nil, fmt.Errorf("JVMTI GetAllThreads returns %v", e)
+	}
+	defer jvm.jvmti.deallocate((*C.uchar)(unsafe.Pointer(jts)))
+	for i := 0; i < int(nt); i++ {
+		p := (*C.jobject)(unsafe.Pointer(uintptr(unsafe.Pointer(jts)) + uintptr(i) * ptrSize))
+		if t,e := jvm.fillThread(*p); e != nil {
+			return nil, e
+		} else {
+			thrds = append(thrds, t)
+		}
+	}
+	return
 }

@@ -55,6 +55,16 @@ func TestGetProperties(t *testing.T) {
 	}
 }
 
+func TestDumpThreads(t *testing.T) {
+	thrds,e := jvm.DumpThreads()
+	assert.Nil(t, e)
+	assert.NotNil(t, thrds)
+	assert.Greater(t, len(thrds), 0)
+	for i,th := range thrds {
+		t.Logf("Thread-%d %s\n", i, th.String())
+	}
+}
+
 /*
 // TODO: run this test at agent OnLoad phase
 func TestGetSetProperty(t *testing.T) {
