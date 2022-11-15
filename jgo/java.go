@@ -16,7 +16,7 @@
 
 // The goal is to decouple the exposed interface from CGO, JNI or JVMTI
 
-package jpprof
+package jgo
 
 //#include<jni.h>
 //#include<stdlib.h>

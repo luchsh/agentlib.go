@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package jpprof
+package jgo
 
 import (
 	"io/ioutil"
