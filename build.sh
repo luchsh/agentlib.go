@@ -21,23 +21,8 @@ source env.sh
 detect_java_home
 echo "Using JAVA_HOME=${JAVA_HOME}"
 
-# do build in child process without contaminating current process' state
 (
-  # add platform specific flags
-  case ${OS} in
-    darwin)
-    DL_POSTFIX="dylib"
-    ;;
-    linux)
-    DL_POSTFIX="so"
-    ;;
-    *)
-    echo "Unkown OS, exiting"
-    exit 1
-    ;;
-  esac
-
-  go build -v -buildmode=c-shared -o libjnigo.${DL_POSTFIX}
+  go build -v -o test.exe
 
   if [[ $? -eq 0 ]]; then
     echo "Build successful"
