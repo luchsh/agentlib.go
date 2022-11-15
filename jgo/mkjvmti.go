@@ -36,10 +36,11 @@ func init() {
 }
 
 type jvmtiPipe struct {
-	out    io.Writer
-	in     io.Reader
-	consts [][]string // constatn definition, converted from enum
-	fns    []fn
+	out         io.Writer
+	in          io.Reader
+	consts      [][]string // constatn definition, converted from enum
+	fns         []fn
+	jvmtiErrors []string
 }
 
 // parsed function info
@@ -120,16 +121,16 @@ func (f *fn) cgoimpl(lnpfx string) string {
 // convert C type decl to Go
 func goTypeOfC(ct string) string {
 	ct = strings.Replace(ct, "const ", "", 1)
-	famousTypes := map[string]string {
-		"char*": "*C.char",
-		"char**": "**C.char",
+	famousTypes := map[string]string{
+		"char*":           "*C.char",
+		"char**":          "**C.char",
 		"unsigned char**": "**C.uchar",
-		"unsigned char*": "*C.uchar",
-		"void*": "unsafe.Pointer",
-		"void**": "*unsafe.Pointer",
-		"...":"[]interface{}",
+		"unsigned char*":  "*C.uchar",
+		"void*":           "unsafe.Pointer",
+		"void**":          "*unsafe.Pointer",
+		"...":             "[]interface{}",
 	}
-	if v,ok := famousTypes[ct]; ok {
+	if v, ok := famousTypes[ct]; ok {
 		return v
 	}
 	fds := strings.Fields(ct)
@@ -137,8 +138,8 @@ func goTypeOfC(ct string) string {
 		ct = fmt.Sprintf("C.%s", fds[0])
 	}
 	for strings.HasSuffix(ct, "*") {
-		ct = ct[0:len(ct)-1]
-		ct = "*"+ct
+		ct = ct[0 : len(ct)-1]
+		ct = "*" + ct
 	}
 	return ct
 }
@@ -147,7 +148,7 @@ func toGoPrivName(name string) string {
 	if name == "" {
 		return name
 	}
-	return strings.ToLower(name[0:1])+name[1:]
+	return strings.ToLower(name[0:1]) + name[1:]
 }
 
 func (f *fn) goimpl() string {
@@ -181,7 +182,7 @@ func (f *fn) goimpl() string {
 			sb.WriteString(", ")
 		}
 	}
-	sb.WriteString(")\n}\n");
+	sb.WriteString(")\n}\n")
 	return sb.String()
 }
 
@@ -203,6 +204,11 @@ func (jp *jvmtiPipe) parse() {
 					break
 				}
 				cconsts = append(cconsts, ln)
+				// save JVMTI_ERROR_* for generating describer
+				ln = strings.TrimSpace(ln)
+				if strings.HasPrefix(ln, "JVMTI_ERROR_") && !strings.HasPrefix(ln, "JVMTI_ERROR_MAX") {
+					jp.jvmtiErrors = append(jp.jvmtiErrors, strings.Fields(ln)[0])
+				}
 			}
 			jp.consts = append(jp.consts, cconsts)
 		} else if strings.HasPrefix(ln, "typedef struct jvmtiInterface_1_ {") {
@@ -246,9 +252,28 @@ func (jp *jvmtiPipe) printGoWrapper() {
 	}
 }
 
+func (jp *jvmtiPipe) printJvmtiErrorDesc() {
+	fmt.Fprintf(jp.out, `func describeJvmtiError(err int) string {
+  switch (err) {
+`)
+
+	for _, e := range jp.jvmtiErrors {
+		fmt.Fprintf(jp.out, `
+	case %s:
+		return "%s"
+`, e, e)
+	}
+
+	fmt.Fprintf(jp.out, `default:
+		panic(fmt.Sprintf("Unknown JVMTI error code: %%d", err))
+	}
+	return ""
+}`)
+}
+
 func (jp *jvmtiPipe) printJvmtiDef() {
 	fmt.Fprintf(jp.out, "%s\n",
-`// jvmtiEnv corresponds to jvmtiEnv*
+		`// jvmtiEnv corresponds to jvmtiEnv*
 type jvmtiEnv uintptr
 
 func (jvmti jvmtiEnv) raw() *C.jvmtiEnv {
@@ -265,6 +290,7 @@ func (jp *jvmtiPipe) print() {
 	jp.printCgoWrapper()
 	fmt.Fprintf(jp.out, "import \"C\"\n\n")
 	fmt.Fprintf(jp.out, "import \"unsafe\"\n\n")
+	fmt.Fprintf(jp.out, "import \"fmt\"\n\n")
 
 	// consts
 	for _, cc := range jp.consts {
@@ -282,6 +308,7 @@ func (jp *jvmtiPipe) print() {
 	jp.printJvmtiDef()
 	fmt.Fprintf(jp.out, "\n\n")
 	jp.printGoWrapper()
+	jp.printJvmtiErrorDesc()
 }
 
 func (jp *jvmtiPipe) Pump() {
@@ -304,7 +331,7 @@ func (jp *jvmtiPipe) printHeader() {
 // See the License for the specific language governing permissions and
 // limitations under the License.\n\n
 
-package jpprof
+package jgo
 
 // #include <jvmti.h>
 //
