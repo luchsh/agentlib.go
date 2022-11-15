@@ -106,7 +106,19 @@ func CurrentVM() *JavaVM {
 	if e != nil {
 		panic(e)
 	}
-	return v
+	env,_ := v.jvm.AttachCurrentThread()
+	return &JavaVM {
+		jni: env,
+		jvm: v.jvm,
+		jvmti: v.jvmti,
+	}
+}
+
+func (jvm *JavaVM) FullVersion() string {
+	iv := int(jvm.jni.GetVersion())
+	primVer := (iv&0xFFFF0000)>>16
+	minorVer := (iv&0xFFFF)
+	return fmt.Sprintf("Java version %d.%d", primVer, minorVer)
 }
 
 // Retrieve all the properties from the Java VM
