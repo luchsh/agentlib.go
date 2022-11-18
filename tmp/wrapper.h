@@ -28,6 +28,9 @@
 //    its carrier threads, AKA 'm', are not 'JavaThread'.
 //
 
+#if 0
+
+
 #ifndef __WRAPPER_H__
 #define __WRAPPER_H__
 
@@ -96,3 +99,5 @@ void EnableJvmtiCallback(void* p, int event_id);
 #endif
 
 #endif // #ifndef __WRAPPER_H__
+ 
+#endif

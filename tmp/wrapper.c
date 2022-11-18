@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+#if 0
+
 #include "wrapper.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -273,3 +275,5 @@ void Agent_OnUnload(JavaVM* javaVM) {
   _callbacks = NULL;
   free(cb);
 }
+
+#endif
