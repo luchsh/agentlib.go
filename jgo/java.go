@@ -135,17 +135,17 @@ func (jvm *JavaVM) GetSystemProperties() (map[string]string, error) {
 		return nil, fmt.Errorf("no properties found!")
 	}
 
-	defer jvm.deallocate(p)
+	defer deallocate(p)
 
 	res := make(map[string]string)
 	for i := 0; i < int(n); i++ {
-		addr := uintptr(unsafe.Pointer(p)) + uintptr(i)*ptrSize
+		addr := addrAt(p, i)
 		ks := *(**C.char)(unsafe.Pointer(addr))
 		var vs *C.char
 		if e := jvm.jvmti.getSystemProperty(ks, &vs); e != JVMTI_ERROR_NONE {
 			return nil, fmt.Errorf("failed get prop %s, error=%s", C.GoString(ks), describeJvmtiError(int(e)))
 		}
-		defer jvm.deallocate(vs)
+		defer deallocate(vs)
 		res[C.GoString(ks)] = C.GoString(vs)
 	}
 	return res, nil
@@ -160,7 +160,7 @@ func (jvm *JavaVM) GetSystemProperty(key string) string {
 	if e := jvm.jvmti.getSystemProperty(ks, &vs); e != JVMTI_ERROR_NONE {
 		return ""
 	}
-	defer jvm.deallocate(vs)
+	defer deallocate(vs)
 	return C.GoString(vs)
 }
 
@@ -232,13 +232,13 @@ func (jvm *JavaVM) stackTraceOf(jt C.jobject) (frames []Frame, err error) {
 	var jfrs *C.struct__jvmtiFrameInfo
 	flmt := C.jint(1024)
 	if e := jvm.jvmti.allocate(C.jlong(C.sizeof_struct__jvmtiFrameInfo)*C.jlong(flmt), (**C.uchar)(unsafe.Pointer(&jfrs))); e != JVMTI_ERROR_NONE {
-		defer jvm.deallocate(jfrs)
+		defer deallocate(jfrs)
 	}
 	if e := jvm.jvmti.getStackTrace(jt, C.jint(0), flmt, jfrs, &nfrs); e != JVMTI_ERROR_NONE {
 		return nil, fmt.Errorf("JVMTI GetStackTrace failed with %s", describeJvmtiError(int(e)))
 	}
 	for i := 0; i < int(nfrs); i++ {
-		p := (*C.struct__jvmtiFrameInfo)(unsafe.Pointer((uintptr(unsafe.Pointer(jfrs)) + uintptr(C.sizeof_struct__jvmtiFrameInfo)*uintptr(i))))
+		p := elemAt(jfrs, i)
 		//jloc := p.location
 		var name *C.char
 		var sig *C.char
@@ -247,9 +247,9 @@ func (jvm *JavaVM) stackTraceOf(jt C.jobject) (frames []Frame, err error) {
 			return nil, fmt.Errorf("JVMTI GetMethodName failed with %s", describeJvmtiError(int(e)))
 		}
 		defer func() {
-			jvm.deallocate(name)
-			jvm.deallocate(sig)
-			jvm.deallocate(gen)
+			deallocate(name)
+			deallocate(sig)
+			deallocate(gen)
 		}()
 
 		fr := Frame{
@@ -277,9 +277,9 @@ func (jvm *JavaVM) DumpThreads() (thrds []*Thread, err error) {
 	if e := jvm.jvmti.getAllThreads(&nt, &jts); e != JVMTI_ERROR_NONE {
 		return nil, fmt.Errorf("JVMTI GetAllThreads returns %s", describeJvmtiError(int(e)))
 	}
-	defer jvm.deallocate(jts)
+	defer deallocate(jts)
 	for i := 0; i < int(nt); i++ {
-		p := (*C.jobject)(unsafe.Pointer(uintptr(unsafe.Pointer(jts)) + uintptr(i)*ptrSize))
+		p := elemAt(jts, i)
 		if t, e := jvm.fillThread(*p); e != nil {
 			return nil, e
 		} else {
@@ -295,15 +295,15 @@ func (jvm *JavaVM) GetLoadedClasses() (classes []string, err error) {
 	var cls *C.jclass
 	var n C.jint
 	if e := jvm.jvmti.getLoadedClasses(&n, &cls); e == JVMTI_ERROR_NONE {
-		defer jvm.deallocate(cls)
+		defer deallocate(cls)
 		for i := 0; i < int(n); i++ {
-			c := *(*C.jclass)(unsafe.Pointer((uintptr(unsafe.Pointer(cls)) + uintptr(i)*ptrSize)))
+			c := elemAt(cls, i)
 			var sig *C.char
 			var gen *C.char
 			if e := jvm.jvmti.getClassSignature(c, &sig, &gen); e == JVMTI_ERROR_NONE {
 				defer func() {
-					jvm.deallocate(sig)
-					jvm.deallocate(gen)
+					deallocate(sig)
+					deallocate(gen)
 				}()
 				s := fmt.Sprintf("Class: %s (%s)", C.GoString(sig), C.GoString(gen))
 				classes = append(classes, s)
@@ -313,13 +313,20 @@ func (jvm *JavaVM) GetLoadedClasses() (classes []string, err error) {
 	return
 }
 
-func (jvm *JavaVM) deallocate(p interface{}) {
-	switch p.(type) {
-	case *C.jclass:
-	case *C.jobject:
-	case *C.char:
-		jvm.jvmti.deallocate((*C.uchar)(unsafe.Pointer(p.(*C.char))))
-		return;
-	default:
+// helper to simplify the deallcoation of jvmti resource
+func deallocate[T any](p *T) {
+	jvm,e := contextVM()
+	if e != nil {
+		panic(e)
 	}
+	jvm.jvmti.deallocate((*C.uchar)(unsafe.Pointer(p)))
+}
+
+// helper to simplify the address manipulation of C memory
+func elemAt[T any](base *T, idx int) T {
+	return *(*T)(unsafe.Pointer((uintptr(unsafe.Pointer(base)) + uintptr(idx)*ptrSize)))
+}
+
+func addrAt[T any](base *T, idx int) *T {
+	return (*T)(unsafe.Pointer((uintptr(unsafe.Pointer(base)) + uintptr(idx)*ptrSize)))
 }
