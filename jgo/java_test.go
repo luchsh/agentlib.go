@@ -65,6 +65,15 @@ func TestDumpThreads(t *testing.T) {
 	}
 }
 
+func TestGetAllClasses(t *testing.T) {
+	cls,e := jvm.GetLoadedClasses()
+	assert.Nil(t, e)
+	assert.NotNil(t, cls)
+	assert.Greater(t, len(cls), 0)
+	for i,c := range cls {
+		t.Logf("%d: %s\n", i, c)
+	}
+}
 /*
 // TODO: run this test at agent OnLoad phase
 func TestGetSetProperty(t *testing.T) {
