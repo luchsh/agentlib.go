@@ -24,6 +24,7 @@ package jgo
 import "C"
 
 import (
+	"reflect"
 	"fmt"
 	"runtime"
 	"strings"
@@ -135,7 +136,7 @@ func (jvm *JavaVM) GetSystemProperties() (map[string]string, error) {
 		return nil, fmt.Errorf("no properties found!")
 	}
 
-	defer deallocate(p)
+	defer dealloc(p)
 
 	res := make(map[string]string)
 	for i := 0; i < int(n); i++ {
@@ -145,7 +146,7 @@ func (jvm *JavaVM) GetSystemProperties() (map[string]string, error) {
 		if e := jvm.jvmti.getSystemProperty(ks, &vs); e != JVMTI_ERROR_NONE {
 			return nil, fmt.Errorf("failed get prop %s, error=%s", C.GoString(ks), describeJvmtiError(int(e)))
 		}
-		defer deallocate(vs)
+		defer dealloc(vs)
 		res[C.GoString(ks)] = C.GoString(vs)
 	}
 	return res, nil
@@ -160,7 +161,7 @@ func (jvm *JavaVM) GetSystemProperty(key string) string {
 	if e := jvm.jvmti.getSystemProperty(ks, &vs); e != JVMTI_ERROR_NONE {
 		return ""
 	}
-	defer deallocate(vs)
+	defer dealloc(vs)
 	return C.GoString(vs)
 }
 
@@ -232,7 +233,7 @@ func (jvm *JavaVM) stackTraceOf(jt C.jobject) (frames []Frame, err error) {
 	var jfrs *C.struct__jvmtiFrameInfo
 	flmt := C.jint(1024)
 	if e := jvm.jvmti.allocate(C.jlong(C.sizeof_struct__jvmtiFrameInfo)*C.jlong(flmt), (**C.uchar)(unsafe.Pointer(&jfrs))); e != JVMTI_ERROR_NONE {
-		defer deallocate(jfrs)
+		defer dealloc(jfrs)
 	}
 	if e := jvm.jvmti.getStackTrace(jt, C.jint(0), flmt, jfrs, &nfrs); e != JVMTI_ERROR_NONE {
 		return nil, fmt.Errorf("JVMTI GetStackTrace failed with %s", describeJvmtiError(int(e)))
@@ -247,9 +248,9 @@ func (jvm *JavaVM) stackTraceOf(jt C.jobject) (frames []Frame, err error) {
 			return nil, fmt.Errorf("JVMTI GetMethodName failed with %s", describeJvmtiError(int(e)))
 		}
 		defer func() {
-			deallocate(name)
-			deallocate(sig)
-			deallocate(gen)
+			dealloc(name)
+			dealloc(sig)
+			dealloc(gen)
 		}()
 
 		fr := Frame{
@@ -277,10 +278,10 @@ func (jvm *JavaVM) DumpThreads() (thrds []*Thread, err error) {
 	if e := jvm.jvmti.getAllThreads(&nt, &jts); e != JVMTI_ERROR_NONE {
 		return nil, fmt.Errorf("JVMTI GetAllThreads returns %s", describeJvmtiError(int(e)))
 	}
-	defer deallocate(jts)
+	defer dealloc(jts)
 	for i := 0; i < int(nt); i++ {
 		p := elemAt(jts, i)
-		if t, e := jvm.fillThread(*p); e != nil {
+		if t, e := jvm.fillThread(p); e != nil {
 			return nil, e
 		} else {
 			thrds = append(thrds, t)
@@ -295,16 +296,13 @@ func (jvm *JavaVM) GetLoadedClasses() (classes []string, err error) {
 	var cls *C.jclass
 	var n C.jint
 	if e := jvm.jvmti.getLoadedClasses(&n, &cls); e == JVMTI_ERROR_NONE {
-		defer deallocate(cls)
+		defer dealloc(cls)
 		for i := 0; i < int(n); i++ {
 			c := elemAt(cls, i)
-			var sig *C.char
-			var gen *C.char
+			var sig,gen *C.char
 			if e := jvm.jvmti.getClassSignature(c, &sig, &gen); e == JVMTI_ERROR_NONE {
-				defer func() {
-					deallocate(sig)
-					deallocate(gen)
-				}()
+				defer dealloc(sig)
+				defer dealloc(gen)
 				s := fmt.Sprintf("Class: %s (%s)", C.GoString(sig), C.GoString(gen))
 				classes = append(classes, s)
 			}
@@ -314,7 +312,7 @@ func (jvm *JavaVM) GetLoadedClasses() (classes []string, err error) {
 }
 
 // helper to simplify the deallcoation of jvmti resource
-func deallocate[T any](p *T) {
+func dealloc[T any](p *T) {
 	jvm,e := contextVM()
 	if e != nil {
 		panic(e)
@@ -324,9 +322,11 @@ func deallocate[T any](p *T) {
 
 // helper to simplify the address manipulation of C memory
 func elemAt[T any](base *T, idx int) T {
-	return *(*T)(unsafe.Pointer((uintptr(unsafe.Pointer(base)) + uintptr(idx)*ptrSize)))
+	return *addrAt(base, idx)
 }
 
+// sequencially arranged elements of type T, retrieve address of the idx's element
 func addrAt[T any](base *T, idx int) *T {
-	return (*T)(unsafe.Pointer((uintptr(unsafe.Pointer(base)) + uintptr(idx)*ptrSize)))
+	eSize := reflect.TypeOf(*base).Size()
+	return (*T)(unsafe.Pointer((uintptr(unsafe.Pointer(base)) + uintptr(idx)*eSize)))
 }
